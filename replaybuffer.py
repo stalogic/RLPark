@@ -28,12 +28,12 @@ class ReplayBuffer(object):
     def store(self, state, action, reward, next_state, done):
         assert state.shape[0] == action.shape[0] == reward.shape[0] == next_state.shape[0] == done.shape[0] > 0
         size = state.shape[0]
-        if self.log_dir:
-            for i in range(size):
-                x, s = state[i]
-                nx, ns = next_state[i]
-                content = f"({x:.4f}, {s:.4f}) + {action[i][0]} -> ({nx:.4f}, {ns:.4f}) | {reward[i][0]:.4f}"
-                print(content, file=self.log_file)
+        # if self.log_dir:
+        #     for i in range(size):
+        #         x, s = state[i]
+        #         nx, ns = next_state[i]
+        #         content = f"({x:.4f}, {s:.4f}) + {action[i][0]} -> ({nx:.4f}, {ns:.4f}) | {reward[i][0]:.4f}"
+        #         print(content, file=self.log_file)
 
         if self.len + size > self.capacity:
             self.len = self.capacity
