@@ -21,10 +21,10 @@ class PolicyNetwork(torch.nn.Module):
         return x
     
 
-class QValueNetwork(torch.nn.Module):
+class ValueNetwork(torch.nn.Module):
 
     def __init__(self, state_dim, hidden_dim):
-        super(QValueNetwork, self).__init__()
+        super(ValueNetwork, self).__init__()
         self.fc1 = torch.nn.Linear(state_dim, hidden_dim)
         self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
         self.fc3 = torch.nn.Linear(hidden_dim, 1)
@@ -37,3 +37,12 @@ class QValueNetwork(torch.nn.Module):
         x = self.relu(self.bn2(self.fc2(x)))
         x = self.fc3(x)
         return x
+    
+class QValueNetwork(torch.nn.Module):
+
+    def __init__(self, state_dim, action_dim, hidden_dim):
+        super(QValueNetwork, self).__init__()
+        self.fc1 = torch.nn.Linear(state_dim, hidden_dim)
+        self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = torch.nn.Linear(hidden_dim, 1)
+        self.relu = torch.nn.ReLU()

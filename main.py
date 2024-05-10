@@ -2,8 +2,8 @@ import torch
 import gym
 import copy
 import numpy as np
-from net import QValueNetwork, PolicyNetwork
-from replaybuffer import ReplayBuffer
+from algorithm.util.net import QValueNetwork, PolicyNetwork
+from algorithm.util.replaybuffer import ReplayBuffer
 
 def adjust(next_state, reward, min_x, max_x):
     if min_x is None or max_x is None:
@@ -12,10 +12,10 @@ def adjust(next_state, reward, min_x, max_x):
     position, velocity = next_state
 
     if position > max_x:
-        reward += (position - max_x) * 10 + 2
+        # reward += (position - max_x) * 10 + 2
         max_x = position
     elif position < min_x:
-        reward += (min_x - position) * 5 + 1
+        # reward += (min_x - position) * 5 + 1
         min_x = position
 
     if position > 0.5:
@@ -39,7 +39,7 @@ hidden_dim = 128
 gamma = 0.99
 episilon = 0.1
 batch_size = 128
-num_episodes = 10000
+num_episodes = 1000
 
 q_net = QValueNetwork(state_dim, hidden_dim)
 policy_net = PolicyNetwork(state_dim, action_dim, hidden_dim)
@@ -59,15 +59,11 @@ policy_target_net.eval()
 q_optimizer = torch.optim.Adam(q_net.parameters(), lr=0.001)
 policy_optimizer = torch.optim.Adam(policy_net.parameters(), lr=0.0001)
 
-buffer = ReplayBuffer(state_dim, action_dim, log_dir="./log.txt", capacity=200*100)
+buffer = ReplayBuffer(state_dim, action_dim, capacity=200*100)
 
 positions = []
 velocities = []
 
-# code for sample data
-_fp = open("./data.jsonl", "w")
-import json
-threshold = 0.0
 
 for i in range(num_episodes):
 
@@ -107,13 +103,6 @@ for i in range(num_episodes):
     
     positions.append(max_x)
     velocities.append(max_v)
-    if max_x > threshold:
-        threshold += 0.05
-        print(json.dumps({
-            "rewards": float(max_x),
-            "actions": _actions,
-            "states": _states,
-        }), file=_fp)
     
     if len(buffer) > 1000:
         batch = buffer.sample(batch_size)
@@ -152,6 +141,8 @@ for i in range(num_episodes):
             positions = []
             q_target_net.load_state_dict(q_net.state_dict())
             policy_target_net.load_state_dict(policy_net.state_dict())
+            torch.save(q_net.state_dict(), f"ckpt/q_net_I{i}.pth")
+            torch.save(policy_net.state_dict(), f"ckpt/policy_net_I{i}.pth")
 
     else:
         print("Iteration:", i, "Buffer Length:", len(buffer))

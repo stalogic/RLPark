@@ -1,19 +1,15 @@
 import numpy as np
-from functools import partial
 
 class ReplayBuffer(object):
 
-    def __init__(self, state_dim, action_dim, log_dir=None, capacity=100000, dtype=np.float16):
+    def __init__(self, state_dim, action_dim, capacity=100000):
         self.capacity = capacity
         self.len = 0
-        self.states = np.zeros((capacity, state_dim), dtype)
+        self.states = np.zeros((capacity, state_dim))
         self.actions = np.zeros((capacity, action_dim))
         self.rewards = np.zeros((capacity, 1))
         self.next_states = np.zeros((capacity, state_dim))
         self.dones = np.zeros((capacity, 1))
-        if log_dir:
-            self.log_dir = log_dir
-            self.log_file = open(log_dir, 'w')
 
     def __len__(self):
         return self.len
@@ -28,12 +24,6 @@ class ReplayBuffer(object):
     def store(self, state, action, reward, next_state, done):
         assert state.shape[0] == action.shape[0] == reward.shape[0] == next_state.shape[0] == done.shape[0] > 0
         size = state.shape[0]
-        # if self.log_dir:
-        #     for i in range(size):
-        #         x, s = state[i]
-        #         nx, ns = next_state[i]
-        #         content = f"({x:.4f}, {s:.4f}) + {action[i][0]} -> ({nx:.4f}, {ns:.4f}) | {reward[i][0]:.4f}"
-        #         print(content, file=self.log_file)
 
         if self.len + size > self.capacity:
             self.len = self.capacity
