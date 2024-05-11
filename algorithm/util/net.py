@@ -44,5 +44,13 @@ class QValueNetwork(torch.nn.Module):
         super(QValueNetwork, self).__init__()
         self.fc1 = torch.nn.Linear(state_dim, hidden_dim)
         self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = torch.nn.Linear(hidden_dim, 1)
+        self.fc3 = torch.nn.Linear(hidden_dim, action_dim)
         self.relu = torch.nn.ReLU()
+        self.bn1 = torch.nn.BatchNorm1d(hidden_dim)
+        self.bn2 = torch.nn.BatchNorm1d(hidden_dim)
+
+    def forward(self, x):
+        x = self.relu(self.bn1(self.fc1(x)))
+        x = self.relu(self.bn2(self.fc2(x)))
+        x = self.fc3(x)
+        return x

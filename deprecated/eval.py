@@ -36,7 +36,6 @@ with tqdm(range(100), leave=True) as pbar:
                 num_failed += 1
                 break
 
-        pbar.update(1)
         pbar.set_description(f'Evaluation: {i}')
         if done_steps:
             pbar.set_postfix_str(f"success: {len(done_steps)}, failure: {num_failed}, min steps: {min(done_steps)}, max steps: {max(done_steps)}, avg steps: {sum(done_steps) / len(done_steps):.2f}")

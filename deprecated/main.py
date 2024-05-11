@@ -2,7 +2,7 @@ import torch
 import gym
 import copy
 import numpy as np
-from algorithm.util.net import QValueNetwork, PolicyNetwork
+from algorithm.util.net import ValueNetwork, PolicyNetwork
 from algorithm.util.replaybuffer import ReplayBuffer
 
 def adjust(next_state, reward, min_x, max_x):
@@ -41,7 +41,7 @@ episilon = 0.1
 batch_size = 128
 num_episodes = 1000
 
-q_net = QValueNetwork(state_dim, hidden_dim)
+q_net = ValueNetwork(state_dim, hidden_dim)
 policy_net = PolicyNetwork(state_dim, action_dim, hidden_dim)
 q_target_net = copy.deepcopy(q_net)
 policy_target_net = copy.deepcopy(policy_net)
@@ -115,8 +115,8 @@ for i in range(num_episodes):
 
         q_values = q_net(states)
         with torch.no_grad():
-            next_actions_prob = policy_target_net(next_states)
-            next_actions = torch.argmax(next_actions_prob, dim=1, keepdim=True)
+            # next_actions_prob = policy_target_net(next_states)
+            # next_actions = torch.argmax(next_actions_prob, dim=1, keepdim=True)
             next_q_values = q_target_net(next_states)
             target_q_values = rewards + gamma * next_q_values * (1 - dones)
             td_error = target_q_values - q_values
