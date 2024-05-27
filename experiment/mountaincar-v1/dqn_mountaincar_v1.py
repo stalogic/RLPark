@@ -4,7 +4,7 @@ import os
 print(f"running in {os.getcwd()}")
 os.sys.path.append(os.getcwd())
 from algorithm import DQN
-from experiment.envs import mountain_car_v0_reward_redefined as mountain_car_env
+from experiment.envs import mountain_car_v0_state_reward_redefined as mountain_car_env
 
 env = mountain_car_env()
 state_dim = env.state_dim

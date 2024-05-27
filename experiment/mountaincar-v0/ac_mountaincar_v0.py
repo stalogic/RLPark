@@ -4,9 +4,9 @@ import os
 print(f"running in {os.getcwd()}")
 os.sys.path.append(os.getcwd())
 from algorithm import ActorCritic, DQN
-from experiment.envs import mountain_car_v0_reward_redefined
+from env import mountain_car_v0_reward_redefined as mountain_car_env
 
-env = mountain_car_v0_reward_redefined()
+env = mountain_car_env()
 state_dim = env.state_dim
 action_dim = env.action_dim
 hidden_dim = 128

@@ -3,8 +3,8 @@ import tqdm
 import os
 print(f"running in {os.getcwd()}")
 os.sys.path.append(os.getcwd())
-from algorithm import DQN
-from experiment.envs import mountain_car_v0_reward_redefined as mountain_car_env
+from algorithm import ActorCritic, DQN
+from experiment.envs import mountain_car_v0_state_reward_redefined as mountain_car_env
 
 env = mountain_car_env()
 state_dim = env.state_dim
@@ -13,7 +13,7 @@ hidden_dim = 128
 batch_size = 128
 num_episodes = 10000
 
-agent = DQN(state_dim, action_dim, hidden_dim, batch_size)
+agent = ActorCritic(state_dim, action_dim, hidden_dim, batch_size)
 
 metrics = {
     "reward": [],
