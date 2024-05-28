@@ -4,8 +4,6 @@ class MountainCarEnv():
 
     def __init__(self) -> None:
         self.env = gym.make('MountainCar-v0')
-        self.state_dim = self.env.observation_space.shape[0]
-        self.action_dim = self.env.action_space.n
 
         # infomation
         self.rightmost_position = None
@@ -13,6 +11,14 @@ class MountainCarEnv():
         self.total_reward = 0
         self.total_raw_reward = 0
         self.total_steps = 0
+    
+    @property
+    def state_dim(self) -> int:
+        return self.env.observation_space.shape[0]
+    
+    @property
+    def action_dim(self) -> int:
+        return self.env.action_space.n
 
     def reset(self):
         obs, _ = self.env.reset()
