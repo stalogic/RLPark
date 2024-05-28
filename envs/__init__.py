@@ -1,3 +1,5 @@
 from .mountain_car import mountain_car_raw as mountain_car_v0
 from .mountain_car import mountain_car_reward_redefined as mountain_car_v1
 from .mountain_car import mountain_car_state_reward_redefined as mountain_car_v2
+from .poker_game import poker_game_raw as poker_game_v0
+from .poker_game import poker_game_raw_2d as poker_game_2d_v0

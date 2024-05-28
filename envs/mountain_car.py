@@ -14,7 +14,14 @@ class MountainCarEnv():
     
     @property
     def state_dim(self) -> int:
-        return self.env.observation_space.shape[0]
+        if hasattr(self, '_state_dim'):
+            return self._state_dim
+        self._state_dim = self.env.observation_space.shape[0]
+        return self._state_dim
+
+    @state_dim.setter
+    def state_dim(self, value):
+        self._state_dim = value
     
     @property
     def action_dim(self) -> int:
@@ -100,7 +107,7 @@ def mountain_car_state_reward_redefined():
 
 
 if __name__ == '__main__':
-    env = mountain_car_v0_state_reward_redefined()
+    env = mountain_car_state_reward_redefined()
     obs, info = env.reset()
     print(obs, info)
 

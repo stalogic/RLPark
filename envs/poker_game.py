@@ -181,6 +181,11 @@ class PokerGameEnv(object):
 
         return obs, reward, done, terminal, info
 
+def poker_game_raw() -> PokerGameEnv:
+    return PokerGameEnv(state_ndim=1)
+
+def poker_game_raw_2d() -> PokerGameEnv:
+    return PokerGameEnv(state_ndim=2)
 
 def test_poker_game():
     game = PokerGame()
