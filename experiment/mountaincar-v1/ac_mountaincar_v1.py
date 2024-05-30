@@ -1,6 +1,7 @@
 import numpy as np
 import tqdm
 import os
+import wandb
 print(f"running in {os.getcwd()}")
 os.sys.path.append(os.getcwd())
 from algorithm import ActorCritic, DQN
