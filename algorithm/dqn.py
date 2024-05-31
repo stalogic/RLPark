@@ -36,6 +36,14 @@ class DQN(DiscreteRLModel):
             state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float).to(self.device)
             action = self.target_q_net(state).detach().argmax().item()
         return action
+    
+    def predict_action(self, state) -> int:
+        self.q_net.eval()
+        with torch.no_grad():
+            state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float).to(self.device)
+            action = self.q_net(state).argmax().item()
+        self.q_net.train()
+        return action
 
     def update(self) -> None:
         if len(self.replay_buffer) < self.kwargs.get('batch_size', 1000):

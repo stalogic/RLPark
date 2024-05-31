@@ -49,6 +49,15 @@ class ActorCritic(DiscreteRLModel):
 
         return action
     
+    def predict_action(self, state) -> int:
+        self.policy_net.eval()
+        with torch.no_grad():
+            state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float32).to(self.device)
+            action_prob = self.policy_net(state)
+            action = action_prob.argmax(dim=1).item()
+        self.policy_net.train()
+        return action
+    
     def update(self) -> None:
         if len(self.replay_buffer) < self.kwargs.get('min_buffer_size', 1000):
             return
