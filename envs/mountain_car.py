@@ -32,6 +32,9 @@ class MountainCarEnv():
         obs, _ = self.env.reset()
         self.rightmost_position = obs[0]
         self.max_speed = abs(obs[1])
+        self.total_reward = 0.0
+        self.total_raw_reward = 0.0
+        self.total_steps = 0
         
         if hasattr(self, 'state_func'):
             obs = self.state_func(obs)
