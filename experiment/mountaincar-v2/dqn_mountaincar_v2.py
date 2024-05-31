@@ -1,6 +1,9 @@
 import os
 import sys
 import wandb
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module='torch')
+
 
 print(f"running in {os.getcwd()}")
 sys.path.append(os.getcwd())

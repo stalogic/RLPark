@@ -16,42 +16,42 @@ def compute_advantage(gamma, lmbda, td_delta):
 def train_and_evaluate(env, agent, num_episodes=1000, **kwargs):
 
     metrics = {
-        "reward": [],
-        "steps": [],
-        "done": [],
-        "terminal": [],
+        "episode_return": [],
+        "episode_step": [],
+        "episode_done": [],
+        "episode_terminal": [],
     }
 
     with tqdm.tqdm(range(num_episodes)) as pbar:
         for i_episode in pbar:
-            total_reward, total_steps = 0.0, 0
+            episode_return, episode_step = 0.0, 0
 
             state, _ = env.reset()
             while True:
                 action = agent.take_action(state)
-                next_state, reward, done, terminal, info = env.step(action)
+                next_state, reward, done, terminal, _ = env.step(action)
                 agent.add_experience(state, action, reward, next_state, done)
                 state = next_state
 
-                total_reward += reward
-                total_steps += 1
+                episode_return += reward
+                episode_step += 1
 
                 if done or terminal:
-                    metrics["reward"].append(total_reward)
-                    metrics["steps"].append(total_steps)
-                    metrics["done"].append(int(done))
-                    metrics["terminal"].append(int(terminal))
+                    metrics["episode_return"].append(episode_return)
+                    metrics["episode_step"].append(episode_step)
+                    metrics["episode_done"].append(int(done))
+                    metrics["episode_terminal"].append(int(terminal))
                     break
             
             agent.update()
-            
+
             if i_episode > 0 and i_episode % kwargs.get("num_eval_episodes", 100) == 0:
                 logdata = {
-                    "Episode": i_episode,
-                    "Reward": np.mean(metrics["reward"]),
-                    "Steps": np.mean(metrics["steps"]),
-                    "Done": np.mean(metrics["done"]),
-                    "Terminal": np.mean(metrics["terminal"])
+                    "Ev_Index": i_episode,
+                    "Ev_Avg_Return": np.mean(metrics["episode_return"]),
+                    "Ev_Avg_Step": np.mean(metrics["episode_step"]),
+                    "Ev_Avg_Done": np.mean(metrics["episode_done"]),
+                    "Ev_Avg_Terminal": np.mean(metrics["episode_terminal"]),
                 }
                 
                 for key in metrics.keys():

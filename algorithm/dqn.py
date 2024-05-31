@@ -1,5 +1,6 @@
 import torch
 import copy
+import wandb
 import numpy as np
 from pathlib import Path
 from .util import DiscreteRLModel, QValueNetwork
@@ -57,6 +58,9 @@ class DQN(DiscreteRLModel):
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.q_net.parameters(), self.kwargs.get('max_grad_norm', 0.5))
         self.q_net_optimizer.step()
+
+        try: wandb.log({'Tr_loss': loss.item()})
+        except: pass
 
         self.count += 1
         if self.count % self.kwargs.get('target_update_frequency', 100) == 0:

@@ -71,9 +71,6 @@ class ActorCritic(DiscreteRLModel):
         log_prob = torch.log(self.policy_net(states).gather(1, actions))
         policy_loss = torch.mean(-log_prob * td_delta)
 
-        try: wandb.log({'value_loss': value_loss.item(), 'policy_loss': policy_loss.item()})
-        except: pass
-
         self.value_optimizer.zero_grad()
         self.policy_optimizer.zero_grad()
         value_loss.backward()
@@ -82,6 +79,9 @@ class ActorCritic(DiscreteRLModel):
         torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), self.kwargs.get('policy_max_grad_norm', 0.5))
         self.value_optimizer.step()
         self.policy_optimizer.step()
+
+        try: wandb.log({'Tr_value_loss': value_loss.item(), 'Tr_policy_loss': policy_loss.item()})
+        except: pass
 
         self.count += 1
         if self.count % self.kwargs.get('update_target_frequency', 100) == 0:

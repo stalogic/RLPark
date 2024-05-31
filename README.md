@@ -1,6 +1,18 @@
 # RLPark
  Toy Code for Reinforment Learning
 
+# 日志信息前缀规范
+不同领域、阶段产生的日志数据，除了字段名外，需要增加对应的前缀，方便识别日志数据来源。现有如下前缀：
+
+| 前缀 | 全称 | 描述 |
+| --- | --- | --- |
+| **St** | Step | Env中的每一步产生一次数据 |
+| **Gm** | Game | Env中每一局游戏产生一次数据 |
+| **Ep** | Episode | 每一个Episode产生一次数据 |
+| **Tr** | Train | 模型训练一次产生一次数据 |
+| **Ev** | Evaluate | 模型评估一次产生一次数据 |
+| **Pd** | Predict | 模型预测一次产生一次数据 |
+
 
 # 重要tricks：
 1. 加入梯度裁剪`torch.nn.utils.clip_grad_norm_(q_net.parameters(), 0.5)`，通过梯度裁剪，防止梯度爆炸，防止损失函数出现几个数量级的差异。
@@ -49,3 +61,5 @@ print(dict(self.policy_net.named_parameters()).keys())  # named_parameters() 与
 >>>
 dict_keys(['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias', 'fc3.weight', 'fc3.bias', 'bn1.weight', 'bn1.bias', 'bn2.weight', 'bn2.bias', 'bn3.weight', 'bn3.bias'])
 ```
+
+2. 在mountainer_car_v2版本的实验中，在**obs**中加入一个表示剩余步数的变量，同时在完成游戏目标（位置>0.5）时，根据剩余步数，额外增加奖励，目标是希望agent能在最少的步数内完成游戏。初始版本中，是直接将剩余步数作为**obs**的第三个维度，但是这个版本在训练中，agent无法收敛，通过打印信息排除bug后，任然无法收敛。最后发现是因为**obs**的第三个维度数值太大（0-200），而前两个维度的值在-1~1之间，通过简单处理，将剩余步数转化为-0.5~0.5之间的值，然后在进行训练，agent就可以正常收敛。最优模型相比mountainer_car_v1版本，完成游戏的步数从平均140，降低到平均120。

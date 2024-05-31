@@ -7,7 +7,7 @@ class MountainCarEnv():
         self.env = gym.make('MountainCar-v0')
 
         # infomation
-        self.rightmost_position = None
+        self.max_xvalue = None
         self.max_speed = None
         self.total_reward = 0
         self.total_raw_reward = 0
@@ -30,7 +30,7 @@ class MountainCarEnv():
 
     def reset(self):
         obs, _ = self.env.reset()
-        self.rightmost_position = obs[0]
+        self.max_xvalue = obs[0]
         self.max_speed = abs(obs[1])
         self.total_reward = 0.0
         self.total_raw_reward = 0.0
@@ -40,11 +40,11 @@ class MountainCarEnv():
             obs = self.state_func(obs)
 
         info = {
-            'rightmost_position': self.rightmost_position,
-            'max_speed': self.max_speed,
-            'total_reward': self.total_reward,
-            'total_raw_reward': self.total_raw_reward,
-            'total_steps': self.total_steps
+            'St_max_xvalue': self.max_xvalue,
+            'St_max_speed': self.max_speed,
+            'St_total_reward': self.total_reward,
+            'St_total_raw_reward': self.total_raw_reward,
+            'St_total_steps': self.total_steps
         }
         return obs, info
     
@@ -55,7 +55,7 @@ class MountainCarEnv():
         obs, reward, done, terminal, _ = self.env.step(action)
 
         self.total_steps += 1
-        self.rightmost_position = max(self.rightmost_position, obs[0])
+        self.max_xvalue = max(self.max_xvalue, obs[0])
         self.max_speed = max(self.max_speed, abs(obs[1]))
         self.total_raw_reward += reward
         if hasattr(self, 'state_func'):
@@ -64,15 +64,22 @@ class MountainCarEnv():
             reward = self.reward_func(obs, reward)
         self.total_reward += reward
         info = {
-            'rightmost_position': self.rightmost_position,
-            'max_speed': self.max_speed,
-            'total_reward': self.total_reward,
-            'total_raw_reward': self.total_raw_reward,
-            'total_steps': self.total_steps
+            'St_max_xvalue': self.max_xvalue,
+            'St_max_speed': self.max_speed,
+            'St_total_reward': self.total_reward,
+            'St_total_raw_reward': self.total_raw_reward,
+            'St_total_steps': self.total_steps
         }
 
         if done or terminal:
-            try: wandb.log(info)
+            logdata = {
+                'Gm_max_xvalue': self.max_xvalue,
+                'Gm_max_speed': self.max_speed,
+                'Gm_total_reward': self.total_reward,
+                'Gm_total_raw_reward': self.total_raw_reward,
+                'Gm_total_steps': self.total_steps
+            }
+            try: wandb.log(logdata)
             except: pass
 
         return obs, reward, done, terminal, info
@@ -96,12 +103,14 @@ def mountain_car_reward_redefined():
 def mountain_car_state_reward_redefined():
     import numpy as np
     def _state(self, obs):
-        position, velocity = obs
-        self.steps_remaining -= 1
-        return np.array([position, velocity, self.steps_remaining / 200])
+        position, velocity = obs[:2]
+        steps_remaining = 200 - self.total_steps
+        remaining = (steps_remaining - 100) / 200.
+        return np.array([position, velocity, remaining])
     
     def _reward(self, obs, reward):
-        x, v, s = obs
+        x, v = obs[:2]
+        s = 200 - self.total_steps
         if x >= 0.5:
             return 100 + 10 * s
         return reward + 10 * (abs(x+0.5) + 10 * abs(v))
