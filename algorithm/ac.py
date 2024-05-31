@@ -1,6 +1,7 @@
 import torch
 import copy
 import numpy as np
+import wandb
 from pathlib import Path
 from .util import DiscreteRLModel, PolicyNetwork, ValueNetwork
 
@@ -69,6 +70,9 @@ class ActorCritic(DiscreteRLModel):
         value_loss = torch.nn.functional.mse_loss(v_value, td_target)
         log_prob = torch.log(self.policy_net(states).gather(1, actions))
         policy_loss = torch.mean(-log_prob * td_delta)
+
+        try: wandb.log({'value_loss': value_loss.item(), 'policy_loss': policy_loss.item()})
+        except: pass
 
         self.value_optimizer.zero_grad()
         self.policy_optimizer.zero_grad()

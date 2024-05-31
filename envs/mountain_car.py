@@ -1,4 +1,5 @@
 import gym
+import wandb
 
 class MountainCarEnv():
 
@@ -66,6 +67,10 @@ class MountainCarEnv():
             'total_raw_reward': self.total_raw_reward,
             'total_steps': self.total_steps
         }
+
+        if done or terminal:
+            try: wandb.log(info)
+            except: pass
 
         return obs, reward, done, terminal, info
     
