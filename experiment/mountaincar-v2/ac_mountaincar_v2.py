@@ -13,7 +13,7 @@ state_dim = env.state_dim
 action_dim = env.action_dim
 hidden_dim = 128
 batch_size = 128
-num_episodes = 10000
+num_episodes = 5000
 
 wandb.init(project="mountain_car_v2",
             config={

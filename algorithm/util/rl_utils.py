@@ -45,7 +45,10 @@ def train_and_evaluate(env, agent, num_episodes=1000, **kwargs):
             state, _ = env.reset()
             while True:
                 # 选择并执行动作
-                action = agent.take_action(state)
+                if hasattr(env, "action_mask"):
+                    action = agent.take_action_with_mask(state, env.action_mask)
+                else:
+                    action = agent.take_action(state)
                 # 环境反馈，更新状态
                 next_state, reward, done, terminal, _ = env.step(action)
                 # 学习经验
@@ -67,7 +70,10 @@ def train_and_evaluate(env, agent, num_episodes=1000, **kwargs):
                     state, _ = env.reset()
                     while True:
                         # 使用预测模式选择动作
-                        action = agent.predict_action(state)
+                        if hasattr(env, "action_mask"):
+                            action = agent.predict_action_with_mask(state, env.action_mask)
+                        else:
+                            action = agent.predict_action(state)
                         next_state, reward, done, terminal, _ = env.step(action)
                         state = next_state
                         

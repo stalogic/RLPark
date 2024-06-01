@@ -37,11 +37,45 @@ class DQN(DiscreteRLModel):
             action = self.target_q_net(state).detach().argmax().item()
         return action
     
+    def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
+        if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim:
+            raise ValueError("mask must be a list or numpy array with length of action_dim")
+        if isinstance(mask, list):
+            mask = np.array(mask)
+        mask = mask.astype(int)
+
+        if np.random.random() < self.epsilon:
+            action = np.random.choice(self.action_dim, p=mask/mask.sum())
+        else:
+            state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float).to(self.device)
+            q_value = self.target_q_net(state).detach().numpy()
+            q_value[:, mask == 0] = -np.inf
+            action = q_value.argmax()
+
+        return action
+            
+    
     def predict_action(self, state) -> int:
         self.q_net.eval()
         with torch.no_grad():
             state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float).to(self.device)
             action = self.q_net(state).argmax().item()
+        self.q_net.train()
+        return action
+    
+    def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
+        if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim:
+            raise ValueError("mask must be a list or numpy array with length of action_dim")
+        if isinstance(mask, list):
+            mask = np.array(mask)
+        mask = mask.astype(int)
+        
+        self.q_net.eval()
+        with torch.no_grad():
+            state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float).to(self.device)
+            q_value = self.q_net(state).detach().numpy()
+            q_value[:, mask == 0] = -np.inf
+            action = q_value.argmax()
         self.q_net.train()
         return action
 

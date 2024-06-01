@@ -112,7 +112,7 @@ def mountain_car_state_reward_redefined():
         x, v = obs[:2]
         s = 200 - self.total_steps
         if x >= 0.5:
-            return 100 + 10 * s
+            return 100 + 20 * s
         return reward + 10 * (abs(x+0.5) + 10 * abs(v))
     
     env = MountainCarEnv()

@@ -149,6 +149,13 @@ class PokerGameEnv(object):
     @property
     def action_dim(self) -> int:
         return 10
+    
+    @property
+    def action_mask(self) -> list:
+        mask = [0] * 10
+        for i in self.poker_game.cards_a:
+            mask[i] = 1
+        return mask
 
     def reset(self):
         self.poker_game.reset()

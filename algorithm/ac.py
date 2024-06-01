@@ -49,12 +49,52 @@ class ActorCritic(DiscreteRLModel):
 
         return action
     
+    def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
+        if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim:
+            raise ValueError('mask must be a list or numpy array with length of action_dim')
+        
+        if isinstance(mask, list):
+            mask = np.array(mask)
+        mask = mask.astype(int)
+
+        if epsilon := self.kwargs.get('epsilon'):
+            if  epsilon > 1 or epsilon < 0:
+                raise ValueError('epsilon must be in (0, 1)')
+            
+        if epsilon and np.random.random() < epsilon:
+            action = np.random.choice(self.action_dim, p=mask/mask.sum())
+        else:
+            state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float32).to(self.device)
+            action_prob = self.target_policy_net(state)
+            action_prob = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
+            action_dist = torch.distributions.Categorical(action_prob)
+            action = action_dist.sample().item()
+        
+        return action
+    
     def predict_action(self, state) -> int:
         self.policy_net.eval()
         with torch.no_grad():
             state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob.argmax(dim=1).item()
+        self.policy_net.train()
+        return action
+    
+    def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
+        if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim:
+            raise ValueError('mask must be a list or numpy array with length of action_dim')
+        
+        if isinstance(mask, list):
+            mask = np.array(mask)
+        mask = mask.astype(int)
+
+        self.policy_net.eval()
+        with torch.no_grad():
+            state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float32).to(self.device)
+            action_prob = self.policy_net(state)
+            action = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
+            action = action.argmax(dim=1).item()
         self.policy_net.train()
         return action
     
