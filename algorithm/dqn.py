@@ -28,6 +28,7 @@ class DQN(DiscreteRLModel):
         self.target_q_net.eval()
 
         self.q_net_optimizer = torch.optim.Adam(self.q_net.parameters(), lr=lr)
+        self.q_net_scheduler = torch.optim.lr_scheduler.StepLR(self.q_net_optimizer, step_size=100, gamma=0.955)
 
     def take_action(self, state) -> int:
         if np.random.random() < self.epsilon:
@@ -100,8 +101,9 @@ class DQN(DiscreteRLModel):
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.q_net.parameters(), self.kwargs.get('max_grad_norm', 0.5))
         self.q_net_optimizer.step()
+        self.q_net_scheduler.step()
 
-        try: wandb.log({'Tr_loss': loss.item()})
+        try: wandb.log({'Tr_loss': loss.item(), 'Tr_learning_rate': self.q_net_scheduler.get_last_lr()[0]})
         except: pass
 
         self.count += 1

@@ -32,6 +32,8 @@ class ActorCritic(DiscreteRLModel):
 
         self.policy_optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=self.kwargs.get('actor_lr', lr))
         self.value_optimizer = torch.optim.Adam(self.value_net.parameters(), lr=self.kwargs.get('critic_lr', lr))
+        self.policy_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.policy_optimizer, step_size=100, gamma=0.955)
+        self.value_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.value_optimizer, step_size=100, gamma=0.955)
 
 
     def take_action(self, state) -> int:
@@ -128,8 +130,16 @@ class ActorCritic(DiscreteRLModel):
         torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), self.kwargs.get('policy_max_grad_norm', 0.5))
         self.value_optimizer.step()
         self.policy_optimizer.step()
+        self.value_lr_scheduler.step()
+        self.policy_lr_scheduler.step()
 
-        try: wandb.log({'Tr_value_loss': value_loss.item(), 'Tr_policy_loss': policy_loss.item()})
+        try: 
+            wandb.log({
+                'Tr_value_loss': value_loss.item(), 
+                'Tr_policy_loss': policy_loss.item(), 
+                'Tr_value_learning_rate': self.value_lr_scheduler.get_last_lr()[0], 
+                'Tr_policy_learning_rate': self.policy_lr_scheduler.get_last_lr()[0]
+                })
         except: pass
 
         self.count += 1
