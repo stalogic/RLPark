@@ -5,8 +5,9 @@ from .poker_game import poker_game_raw as poker_game_v0
 from .poker_game import poker_game_raw_2d as poker_game_2d_v0
 from .cart_pole import cart_pole_v0
 from .cart_pole import cart_pole_v1
+from .acrobot import acrobot_v1
 
-def list_envs():
+def list_discrete_envs():
     return [
         "mountain_car_v0",
         "mountain_car_v1",
@@ -15,6 +16,18 @@ def list_envs():
         # "poker_game_2d_v0",
         "cart_pole_v0",
         "cart_pole_v1",
+        "acrobot_v1",
     ]
 
-ENV_LIST = list_envs()
+DISCRETE_ENV_LIST = list_discrete_envs()
+
+from .pendulum import pendulum_v1
+from .mountain_car_continuous import mountain_car_continuous_raw as mountain_car_continuous_v0
+
+def list_continuous_envs():
+    return [
+        "pendulum_v1",
+        "mountain_car_continuous_v0",
+    ]
+
+CONTINUOUS_ENV_LIST = list_continuous_envs()
