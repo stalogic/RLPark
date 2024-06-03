@@ -46,6 +46,7 @@ def generate_python_script(algo_name: str, env_name: str):
     path.mkdir(parents=True, exist_ok=True)
     path = path / f"{algo_name}_{env_name}.py".lower()
     path.write_text(code)
+    return str(path)
 
 if __name__ == '__main__':
     typer.run(generate_python_script)
