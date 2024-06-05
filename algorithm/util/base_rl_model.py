@@ -1,7 +1,7 @@
 import numpy as np
 from . import ReplayBuffer
 
-class BaseRLModel(object):
+class OffPolicyRLModel(object):
 
     def __init__(self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000) -> None:
         self.replay_buffer = ReplayBuffer(state_dim_or_shape, action_dim_or_shape, capacity)
@@ -30,4 +30,7 @@ class BaseRLModel(object):
 
 
         
+class OnPolicyRLModel(object):
+    def __init__(self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000) -> None:
+        self.count = 0
     

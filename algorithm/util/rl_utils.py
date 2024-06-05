@@ -30,6 +30,13 @@ def train_and_evaluate(env, agent, num_episodes=1000, **kwargs):
     - 无
     """
     
+    if hasattr(agent, "replay_buffer"):
+        train_and_evaluate_offpolicy_agent(env, agent, num_episodes, **kwargs)
+    else:
+        train_and_evaluate_onpolicy_agent(env, agent, num_episodes, **kwargs)
+
+def train_and_evaluate_offpolicy_agent(env, agent, num_episodes=1000, **kwargs):
+    
     # 初始化用于记录指标的字典
     metrics = {
         "episode_return": [],  # 每个episode的回报
@@ -63,7 +70,7 @@ def train_and_evaluate(env, agent, num_episodes=1000, **kwargs):
             agent.update()
 
             # 达到评估周期时进行性能评估
-            if i_episode > 0 and i_episode % kwargs.get("num_eval_frequence", 100) == 0:
+            if (i_episode + 1) % kwargs.get("num_eval_frequence", 100) == 0:
                 # 执行多轮评估episode
                 for _ in tqdm.tqdm(range(kwargs.get("num_eval_episodes", 100)), desc="Evaluating", leave=False):
                     episode_return, episode_step = 0.0, 0
@@ -107,3 +114,87 @@ def train_and_evaluate(env, agent, num_episodes=1000, **kwargs):
                 try: wandb.log(logdata)
                 except: pass  # 忽略wandb未安装或配置不当的情况
 
+
+def train_and_evaluate_onpolicy_agent(env, agent, num_episodes=1000, **kwargs):
+
+    # 初始化用于记录指标的字典
+    metrics = {
+        "episode_return": [],  # 每个episode的回报
+        "episode_step": [],  # 每个episode的步数
+        "episode_done": [],  # 每个episode是否完成
+        "episode_terminal": [],  # 每个episode是否到达终止状态
+    }
+
+    # 使用tqdm创建进度条以可视化训练进度
+    with tqdm.tqdm(range(num_episodes), desc="Training") as pbar:
+        for i_episode in pbar:
+            # 重置环境，开始新episode
+            state, _ = env.reset()
+            transition_dict = {'states': [], 'actions': [], 'next_states': [], 'rewards': [], 'dones': []}
+            while True:
+                # 选择并执行动作
+                if hasattr(env, "action_mask"):
+                    action = agent.take_action_with_mask(state, env.action_mask)
+                else:
+                    action = agent.take_action(state)
+                # 环境反馈，更新状态
+                next_state, reward, done, terminal, _ = env.step(action)
+                # 学习经验
+                transition_dict['states'].append(state)
+                transition_dict['actions'].append(action)
+                transition_dict['next_states'].append(next_state)
+                transition_dict['rewards'].append(reward)
+                transition_dict['dones'].append(done)
+                state = next_state
+                
+                # 判断episode是否结束
+                if done or terminal:
+                    break
+            
+            # 更新智能体模型
+            agent.update(transition_dict)
+
+            # 达到评估周期时进行性能评估
+            if (i_episode + 1) % kwargs.get("num_eval_frequence", 100) == 0:
+                # 执行多轮评估episode
+                for _ in tqdm.tqdm(range(kwargs.get("num_eval_episodes", 100)), desc="Evaluating", leave=False):
+                    episode_return, episode_step = 0.0, 0
+                    state, _ = env.reset()
+                    while True:
+                        # 使用预测模式选择动作
+                        if hasattr(env, "action_mask"):
+                            action = agent.predict_action_with_mask(state, env.action_mask)
+                        else:
+                            action = agent.predict_action(state)
+                        next_state, reward, done, terminal, _ = env.step(action)
+                        state = next_state
+                        
+                        # 累加评估指标
+                        episode_return += reward
+                        episode_step += 1
+                        
+                        # 记录评估结果
+                        if done or terminal:
+                            metrics["episode_return"].append(episode_return)
+                            metrics["episode_step"].append(episode_step)
+                            metrics["episode_done"].append(int(done))
+                            metrics["episode_terminal"].append(int(terminal))
+                            break
+
+                # 计算平均指标并记录日志
+                logdata = {
+                    "Ev_Index": i_episode,
+                    "Ev_Avg_Return": np.mean(metrics["episode_return"]),
+                    "Ev_Avg_Step": np.mean(metrics["episode_step"]),
+                    "Ev_Avg_Done": np.mean(metrics["episode_done"]),
+                    "Ev_Avg_Terminal": np.mean(metrics["episode_terminal"]),
+                }
+                
+                # 清空指标准备下一轮评估
+                for key in metrics.keys():
+                    metrics[key] = []
+
+                # 更新进度条信息，并尝试通过wandb记录日志
+                pbar.set_postfix(logdata)
+                try: wandb.log(logdata)
+                except: pass  # 忽略wandb未安装或配置不当的情况
