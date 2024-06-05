@@ -104,9 +104,7 @@ def mountain_car_state_reward_redefined():
     import numpy as np
     def _state(self, obs):
         position, velocity = obs[:2]
-        steps_remaining = 200 - self.total_steps
-        remaining = (steps_remaining - 100) / 200.
-        return np.array([position, velocity, remaining])
+        return np.array([position, velocity, self.total_steps])
     
     def _reward(self, obs, reward):
         x, v = obs[:2]
@@ -117,7 +115,6 @@ def mountain_car_state_reward_redefined():
     
     env = MountainCarEnv()
     env.state_dim += 1
-    setattr(env, "steps_remaining", 201)
     setattr(MountainCarEnv, "state_func", _state)
     setattr(MountainCarEnv, "reward_func", _reward)
     return env
@@ -131,6 +128,6 @@ if __name__ == '__main__':
     while True:
         action = env.sample_action()
         obs, reward, done, terminal, info = env.step(action)
-        print(obs, reward, done, terminal, info)
+        print(action, obs, reward, done, terminal, info)
         if done or terminal:
             break

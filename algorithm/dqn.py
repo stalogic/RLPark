@@ -3,10 +3,10 @@ import copy
 import wandb
 import numpy as np
 from pathlib import Path
-from .util import DiscreteRLModel, QValueNetwork
+from .util import BaseRLModel, QValueNetwork
 
 
-class DQN(DiscreteRLModel):
+class DQN(BaseRLModel):
     
     def __init__(self, state_dim, action_dim, hidden_dim=32, batch_size=128, epsilon=0.1, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
         super().__init__(state_dim, **kwargs)

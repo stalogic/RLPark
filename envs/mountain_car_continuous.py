@@ -26,7 +26,7 @@ class ContinuousMountainCarEnv():
     
     @property
     def action_dim(self) -> int:
-        return self.env.action_space.n
+        return self.env.action_space.shape
 
     def reset(self):
         obs, _ = self.env.reset()
@@ -104,9 +104,7 @@ def mountain_car_continuous_state_reward_redefined():
     import numpy as np
     def _state(self, obs):
         position, velocity = obs[:2]
-        steps_remaining = 200 - self.total_steps
-        remaining = (steps_remaining - 100) / 200.
-        return np.array([position, velocity, remaining])
+        return np.array([position, velocity, self.total_steps])
     
     def _reward(self, obs, reward):
         x, v = obs[:2]
@@ -117,7 +115,6 @@ def mountain_car_continuous_state_reward_redefined():
     
     env = ContinuousMountainCarEnv()
     env.state_dim += 1
-    setattr(env, "steps_remaining", 201)
     setattr(ContinuousMountainCarEnv, "state_func", _state)
     setattr(ContinuousMountainCarEnv, "reward_func", _reward)
     return env
@@ -131,6 +128,6 @@ if __name__ == '__main__':
     while True:
         action = env.sample_action()
         obs, reward, done, terminal, info = env.step(action)
-        print(obs, action, reward, done, terminal, info)
+        print(action, obs, reward, done, terminal, info)
         if done or terminal:
             break

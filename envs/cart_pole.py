@@ -81,6 +81,6 @@ if __name__ == '__main__':
     while True:
         action = env.sample_action()
         obs, reward, done, terminal, info = env.step(action)
-        print(obs, reward, done, terminal, info)
+        print(action, obs, reward, done, terminal, info)
         if done or terminal:
             break

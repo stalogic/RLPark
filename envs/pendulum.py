@@ -17,7 +17,7 @@ class PendulumEnv():
 
     @property
     def action_dim(self) -> int:
-        return self.env.action_space.n
+        return self.env.action_space.shape
 
     def reset(self):
         obs, _ = self.env.reset()
@@ -65,17 +65,24 @@ class PendulumEnv():
 
         return obs, reward, done, terminal, info
 
-def pendulum_v1():
+def pendulum_raw():
+    return PendulumEnv()
+
+def pendulum_reward_redefined():
+    def _reward(self, obs, reward):
+        return (reward + 8) / 8
+    
+    setattr(PendulumEnv, "reward_func", _reward)
     return PendulumEnv()
 
 if __name__ == '__main__':
-    env = pendulum_v1()
+    env = pendulum_reward_redefined()
     obs, info = env.reset()
     print(obs, info)
 
     while True:
         action = env.sample_action()
         obs, reward, done, terminal, info = env.step(action)
-        print(obs, reward, done, terminal, info)
+        print(action, obs, reward, done, terminal, info)
         if done or terminal:
             break
