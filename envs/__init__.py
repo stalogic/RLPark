@@ -1,6 +1,7 @@
 from .mountain_car import mountain_car_raw as mountain_car_v0
 from .mountain_car import mountain_car_reward_redefined as mountain_car_v1
 from .mountain_car import mountain_car_state_reward_redefined as mountain_car_v2
+from .mountain_car import mountain_car_state_reward_xlogx as mountain_car_v3
 from .poker_game import poker_game_raw as poker_game_v0
 from .poker_game import poker_game_raw_2d as poker_game_2d_v0
 from .cart_pole import cart_pole_v0
@@ -12,6 +13,7 @@ def list_discrete_envs():
         "mountain_car_v0",
         "mountain_car_v1",
         "mountain_car_v2",
+        "mountain_car_v3",
         "poker_game_v0",
         # "poker_game_2d_v0",
         "cart_pole_v0",

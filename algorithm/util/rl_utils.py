@@ -3,15 +3,15 @@ import tqdm
 import numpy as np
 import wandb
 
-def compute_advantage(gamma, lmbda, td_delta):
+def compute_advantage(gamma, lamda, td_delta):
     td_delta = td_delta.detach().numpy()
     advantage_list = []
     advantage = 0.0
     for delta in td_delta[::-1]:
-        advantage = gamma * lmbda * advantage + delta
+        advantage = gamma * lamda * advantage + delta
         advantage_list.append(advantage)
     advantage_list.reverse()
-    return torch.tensor(advantage_list, dtype=torch.float)
+    return torch.tensor(np.array(advantage_list), dtype=torch.float)
 
 def train_and_evaluate(env, agent, num_episodes=1000, **kwargs):
     """

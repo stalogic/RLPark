@@ -170,8 +170,7 @@ class OffPolicyActorCritic(OffPolicyRLModel):
         self.value_net.load_state_dict(torch.load(path / version / "value_net.pth"))
 
 
-
-class OffPolicyContinuousActorCritic(OffPolicyRLModel):
+class OffPolicyActorCriticContinuous(OffPolicyRLModel):
     
     def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
         super().__init__(state_dim_or_shape, **kwargs)
@@ -456,8 +455,7 @@ class ActorCritic(OnPolicyRLModel):
         self.value_net.load_state_dict(torch.load(path / version / "value_net.pth"))
 
 
-
-class ContinuousActorCritic(OffPolicyRLModel):
+class ActorCriticContinuous(OnPolicyRLModel):
     
     def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
         super().__init__(state_dim_or_shape, **kwargs)

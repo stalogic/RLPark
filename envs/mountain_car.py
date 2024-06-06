@@ -119,6 +119,26 @@ def mountain_car_state_reward_redefined():
     setattr(MountainCarEnv, "reward_func", _reward)
     return env
 
+def mountain_car_state_reward_xlogx():
+    import numpy as np
+    def _state(self, obs):
+        position, velocity = obs[:2]
+        return np.array([position, velocity, self.total_steps])
+    
+    def _reward(self, obs, reward):
+        x, v = obs[:2]
+        if s := 200 - self.total_steps < 0: 
+            s = 0
+        if x >= 0.5:
+            return 100 + 20 * s * np.log(1+s)
+        return reward + 10 * (abs(x+0.5) + 10 * abs(v))
+    
+    env = MountainCarEnv()
+    env.state_dim += 1
+    setattr(MountainCarEnv, "state_func", _state)
+    setattr(MountainCarEnv, "reward_func", _reward)
+    return env
+
 
 if __name__ == '__main__':
     env = mountain_car_state_reward_redefined()
