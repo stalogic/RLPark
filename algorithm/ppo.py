@@ -207,9 +207,9 @@ class PPOContinuous(OnPolicyRLModel):
     def take_action(self, state) -> np.ndarray:
         self.policy_net.eval()
         state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
-        mu, std = self.policy_net(state).detach()
-        action_dist = torch.distributions.Normal(mu, std)
-        action = action_dist.sample().cpu().numpy()
+        mu, std = self.policy_net(state)
+        action_dist = torch.distributions.Normal(mu.detach(), std.detach())
+        action = action_dist.sample().cpu().numpy().reshape(self.action_dim_or_shape)
         self.policy_net.train()
         return action
     
@@ -219,8 +219,8 @@ class PPOContinuous(OnPolicyRLModel):
     def predict_action(self, state) -> np.ndarray:
         self.policy_net.eval()
         state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
-        mu, _ = self.policy_net(state).detach()
-        action = mu.cpu().numpy()
+        mu, _ = self.policy_net(state)
+        action = mu.detach().cpu().numpy().reshape(self.action_dim_or_shape)
         self.policy_net.train()
         return action
     
@@ -228,10 +228,11 @@ class PPOContinuous(OnPolicyRLModel):
         raise NotImplementedError('predict_action_with_mask is not implemented')
     
     def update(self, transition_dict) -> None:
-
-        states = np.array(transition_dict['states']).reshape(-1, self.state_dim_or_shape)
-        actions = np.array(transition_dict['actions']).reshape(-1, self.action_dim_or_shape)
-        next_states = np.array(transition_dict['next_states']).reshape(-1, self.state_dim_or_shape)
+        state_shape = (-1, self.state_dim_or_shape) if isinstance(self.state_dim_or_shape, int) else (-1,) + self.state_dim_or_shape
+        action_shape = (-1, self.action_dim_or_shape) if isinstance(self.action_dim_or_shape, int) else (-1,) + self.action_dim_or_shape
+        states = np.array(transition_dict['states']).reshape(state_shape)
+        actions = np.array(transition_dict['actions']).reshape(action_shape)
+        next_states = np.array(transition_dict['next_states']).reshape(state_shape)
         rewards = np.array(transition_dict['rewards']).reshape(-1, 1)
         dones = np.array(transition_dict['dones']).reshape(-1, 1)
 

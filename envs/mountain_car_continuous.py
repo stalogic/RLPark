@@ -114,7 +114,8 @@ def mountain_car_continuous_state_reward_redefined():
     import numpy as np
     def _state(self, obs):
         position, velocity = obs[:2]
-        return np.array([position, velocity, self.total_steps])
+        state = np.array([position, velocity, self.total_steps])
+        return state
     
     def _reward(self, obs, reward):
         x, v = obs[:2]
@@ -131,10 +132,8 @@ def mountain_car_continuous_state_reward_redefined():
 
 
 if __name__ == '__main__':
-    env = mountain_car_continuous_raw()
+    env = mountain_car_continuous_state_reward_redefined()
     obs, info = env.reset()
-    print(obs, info)
-
     while True:
         action = env.sample_action()
         obs, reward, done, terminal, info = env.step(action)
