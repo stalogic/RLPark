@@ -71,6 +71,16 @@ class ContinuousMountainCarEnv():
             'St_total_steps': self.total_steps
         }
 
+        try: 
+            wandb.log({
+                "St_xvalue": obs[0],
+                "St_speed": obs[1],
+                "St_remained_steps": 200 - self.total_steps,
+                "St_reward": reward
+            })
+        except:
+            pass
+
         if done or terminal:
             logdata = {
                 'Gm_max_xvalue': self.max_xvalue,
