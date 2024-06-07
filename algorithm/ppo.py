@@ -205,23 +205,25 @@ class PPOContinuous(OnPolicyRLModel):
 
 
     def take_action(self, state) -> np.ndarray:
-        self.policy_net.eval()
-        state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
-        mu, std = self.policy_net(state)
-        action_dist = torch.distributions.Normal(mu.detach(), std.detach())
-        action = action_dist.sample().cpu().numpy().reshape(self.action_dim_or_shape)
-        self.policy_net.train()
+        with torch.no_grad():
+            self.policy_net.eval()
+            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            mu, std = self.policy_net(state)
+            action_dist = torch.distributions.Normal(mu, std)
+            action = action_dist.sample().cpu().numpy().reshape(self.action_dim_or_shape)
+            self.policy_net.train()
         return action
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
         raise NotImplementedError('take_action_with_mask is not implemented')
     
     def predict_action(self, state) -> np.ndarray:
-        self.policy_net.eval()
-        state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
-        mu, _ = self.policy_net(state)
-        action = mu.detach().cpu().numpy().reshape(self.action_dim_or_shape)
-        self.policy_net.train()
+        with torch.no_grad():
+            self.policy_net.eval()
+            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            mu, _ = self.policy_net(state)
+            action = mu.detach().cpu().numpy().reshape(self.action_dim_or_shape)
+            self.policy_net.train()
         return action
     
     def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -249,7 +251,7 @@ class PPOContinuous(OnPolicyRLModel):
 
             mu, std = self.policy_net(states)
             action_dist = torch.distributions.Normal(mu, std)
-            old_log_prob = action_dist.log_prob(actions)
+            old_log_probs = action_dist.log_prob(actions)
 
         advantages = compute_advantage(gamma=self.gamma, lamda=self.lamda, td_delta=td_delta).to(self.device)
         
@@ -257,11 +259,12 @@ class PPOContinuous(OnPolicyRLModel):
 
             mu, std = self.policy_net(states)
             action_dist = torch.distributions.Normal(mu, std)
-            log_prob = action_dist.log_prob(actions)
-            ratio = torch.exp(log_prob - old_log_prob)
+            log_probs = action_dist.log_prob(actions)
+            # 限制log_prob - old_log_prob 在较小的范围内，避免torch.exp(log_prob_gap)溢出
+            log_prob_gap = torch.clamp(log_probs - old_log_probs, -1, 1)
+            ratio = torch.exp(log_prob_gap)
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 1 - self.eps, 1 + self.eps) * advantages
-
             policy_loss = torch.mean(-torch.min(surr1, surr2))
             value_loss = torch.nn.functional.mse_loss(self.value_net(states), td_target)
 

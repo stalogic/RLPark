@@ -63,3 +63,9 @@ dict_keys(['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias', 'fc3.weight', 'fc
 ```
 
 2. 在mountainer_car_v2版本的实验中，在**obs**中加入一个表示剩余步数的变量，同时在完成游戏目标（位置>0.5）时，根据剩余步数，额外增加奖励，目标是希望agent能在最少的步数内完成游戏。初始版本中，是直接将剩余步数作为**obs**的第三个维度，但是这个版本在训练中，agent无法收敛，通过打印信息排除bug后，任然无法收敛。最后发现是因为**obs**的第三个维度数值太大（0-200），而前两个维度的值在-1~1之间，通过简单处理，将剩余步数转化为-0.5~0.5之间的值，然后在进行训练，agent就可以正常收敛。最优模型相比mountainer_car_v1版本，完成游戏的步数从平均140，降低到平均120。
+
+3. 在PPO算法中，`ratio = torch.exp(log_probs - old_log_probs)`，如果`log_probs - old_log_probs`的结果太大，比如超过102，会导致exp运算溢出，从而导致模型训练中断。这个问题不会出现在离散动作空间的环境中，因为离散动作空间中，`log_probs - old_log_probs`的结果不会太大（在-1到1之间），而连续动作空间中，使用高斯分布来计算`log_probs - old_log_probs`，结果可能会很大。解决这个问题，可以先将`log_probs - old_log_probs`的结果进行截断，比如取值范围在-1到1之间。
+```python
+log_prob_gap = torch.clamp(log_probs - old_log_probs, -1, 1)
+ratio = torch.exp(log_prob_gap)
+```
