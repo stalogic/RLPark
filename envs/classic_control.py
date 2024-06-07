@@ -48,7 +48,7 @@ def mountain_car_v2() -> BaseEnv:
             if done:
                 return 10
             else:
-                return abs(obs[0] + 0.5) +10 * abs(obs[1])
+                return abs(obs[0] + 0.5) + 10 * abs(obs[1])
     return MountainCarEnvV2('MountainCar-v0')
 
 def mountain_car_v3() -> BaseEnv:
@@ -66,7 +66,7 @@ def mountain_car_v3() -> BaseEnv:
                 s = 0 if self.total_steps >= 200 else 200 - self.total_steps
                 return 10 + s * np.log1p(s)
             else:
-                return abs(obs[0] + 0.5) +10 * abs(obs[1]) - 0.1 * np.log1p(self.total_steps)
+                return abs(obs[0] + 0.5) + 10 * abs(obs[1]) - 0.1 * np.log1p(self.total_steps)
     return MountainCarEnvV3('MountainCar-v0')
 
 def mountain_car_continuous_v0() -> BaseEnv:
@@ -75,11 +75,11 @@ def mountain_car_continuous_v0() -> BaseEnv:
 def mountain_car_continuous_v1() -> BaseEnv:
     class MountainCarContinuousEnvV1(BaseEnv):
         def reward_fn(self, obs=None, reward=None, done=None, terminal=None):
-            """完成奖励设置为10, 其他奖励设置为`abs(x+0.5) + 10 * abs(v)`, x为位置, v为速度"""
+            """done=False时奖励设置为`reward + abs(x+0.5) + 10 * abs(v)`, x为位置, v为速度"""
             if done:
-                return 10
+                return reward
             else:
-                return abs(obs[0] + 0.5) + 10 * abs(obs[1])
+                return reward + abs(obs[0] + 0.5) + 10 * abs(obs[1])
     return MountainCarContinuousEnvV1('MountainCarContinuous-v0')
 
 def mountain_car_continuous_v2() -> BaseEnv:
@@ -92,11 +92,11 @@ def mountain_car_continuous_v2() -> BaseEnv:
         def state_dim_or_shape(self) -> int|tuple[int]:
             return 3
         def reward_fn(self, obs=None, reward=None, done=None, terminal=None):
-            """完成奖励设置为10, 其他奖励设置为`abs(x+0.5) + 10 * abs(v)`, x为位置, v为速度"""
+            """done=False时奖励设置为`reward + abs(x+0.5) + 10 * abs(v)`, x为位置, v为速度"""
             if done:
-                return 10
+                return reward
             else:
-                return abs(obs[0] + 0.5) +10 * abs(obs[1])
+                return reward + abs(obs[0] + 0.5) + 10 * abs(obs[1])
     return MountainCarContinuousEnvV2('MountainCarContinuous-v0')
 
 def mountain_car_continuous_v3() -> BaseEnv:
@@ -109,12 +109,12 @@ def mountain_car_continuous_v3() -> BaseEnv:
         def state_dim_or_shape(self) -> int|tuple[int]:
             return 3
         def reward_fn(self, obs=None, reward=None, done=None, terminal=None):
-            """完成奖励设置为`10 + rs * log(1 + rs)`, 其他奖励设置为`abs(x + 0.5) + 10 * abs(v) - 0.1 * log(1 + ts)`, x为位置, v为速度, rs为剩余步数, ts为当前步数"""
+            """done=True时奖励设置为`reward + rs * log(1 + rs)`, done=False时奖励设置为`reward + abs(x + 0.5) + 10 * abs(v) - 0.1 * log(1 + ts)`, x为位置, v为速度, rs为剩余步数, ts为当前步数"""
             if done:
-                s = 0 if self.total_steps >= 200 else 200 - self.total_steps
-                return 10 + s * np.log1p(s)
+                s = 0 if self.total_steps >= 999 else 999 - self.total_steps
+                return reward + s * np.log1p(s)
             else:
-                return abs(obs[0] + 0.5) +10 * abs(obs[1]) - 0.1 * np.log1p(self.total_steps)
+                return reward + abs(obs[0] + 0.5) + 10 * abs(obs[1]) - 0.1 * np.log1p(self.total_steps)
     return MountainCarContinuousEnvV3('MountainCarContinuous-v0')
 
 
