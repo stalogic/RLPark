@@ -144,7 +144,7 @@ class OffPolicyActorCritic(OffPolicyRLModel):
 
         self.count += 1
         if self.count % self.kwargs.get('update_target_frequency', 100) == 0:
-            if (tau:=self.kwargs.get('tau', 0.05)):
+            if (tau:=self.kwargs.get('tau')):
                 for param_name in self.policy_net.state_dict().keys():
                     target_param = self.target_policy_net.state_dict()[param_name]
                     param = self.policy_net.state_dict()[param_name]
@@ -280,7 +280,7 @@ class OffPolicyActorCriticContinuous(OffPolicyRLModel):
 
         self.count += 1
         if self.count % self.kwargs.get('update_target_frequency', 100) == 0:
-            if (tau:=self.kwargs.get('tau', 0.05)):
+            if (tau:=self.kwargs.get('tau')):
                 for param_name in self.policy_net.state_dict().keys():
                     target_param = self.target_policy_net.state_dict()[param_name]
                     param = self.policy_net.state_dict()[param_name]

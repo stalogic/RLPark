@@ -108,7 +108,7 @@ class DQN(OffPolicyRLModel):
 
         self.count += 1
         if self.count % self.kwargs.get('target_update_frequency', 100) == 0:
-            if (tau:=self.kwargs.get('tau', 0.05)):
+            if (tau:=self.kwargs.get('tau')):
                 for param_name in self.q_net.state_dict().keys():
                     target_param = self.target_q_net.state_dict()[param_name]
                     param = self.q_net.state_dict()[param_name]
