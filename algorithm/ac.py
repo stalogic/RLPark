@@ -144,8 +144,19 @@ class OffPolicyActorCritic(OffPolicyRLModel):
 
         self.count += 1
         if self.count % self.kwargs.get('update_target_frequency', 100) == 0:
-            self.target_policy_net.load_state_dict(self.policy_net.state_dict())
-            self.target_value_net.load_state_dict(self.value_net.state_dict())
+            if (tau:=self.kwargs.get('tau', 0.05)):
+                for param_name in self.policy_net.state_dict().keys():
+                    target_param = self.target_policy_net.state_dict()[param_name]
+                    param = self.policy_net.state_dict()[param_name]
+                    target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
+
+                for param_name in self.value_net.state_dict().keys():
+                    target_param = self.target_value_net.state_dict()[param_name]
+                    param = self.value_net.state_dict()[param_name]
+                    target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
+            else:
+                self.target_policy_net.load_state_dict(self.policy_net.state_dict())
+                self.target_value_net.load_state_dict(self.value_net.state_dict())
 
         if self.kwargs.get('save_path') and self.count % self.kwargs.get('save_frequency', 1000) == 0:
             self.save()
@@ -269,8 +280,19 @@ class OffPolicyActorCriticContinuous(OffPolicyRLModel):
 
         self.count += 1
         if self.count % self.kwargs.get('update_target_frequency', 100) == 0:
-            self.target_policy_net.load_state_dict(self.policy_net.state_dict())
-            self.target_value_net.load_state_dict(self.value_net.state_dict())
+            if (tau:=self.kwargs.get('tau', 0.05)):
+                for param_name in self.policy_net.state_dict().keys():
+                    target_param = self.target_policy_net.state_dict()[param_name]
+                    param = self.policy_net.state_dict()[param_name]
+                    target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
+
+                for param_name in self.value_net.state_dict().keys():
+                    target_param = self.target_value_net.state_dict()[param_name]
+                    param = self.value_net.state_dict()[param_name]
+                    target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
+            else:
+                self.target_policy_net.load_state_dict(self.policy_net.state_dict())
+                self.target_value_net.load_state_dict(self.value_net.state_dict())
 
         if self.kwargs.get('save_path') and self.count % self.kwargs.get('save_frequency', 1000) == 0:
             self.save()

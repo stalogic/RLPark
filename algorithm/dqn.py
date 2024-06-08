@@ -108,7 +108,13 @@ class DQN(OffPolicyRLModel):
 
         self.count += 1
         if self.count % self.kwargs.get('target_update_frequency', 100) == 0:
-            self.target_q_net.load_state_dict(self.q_net.state_dict())
+            if (tau:=self.kwargs.get('tau', 0.05)):
+                for param_name in self.q_net.state_dict().keys():
+                    target_param = self.target_q_net.state_dict()[param_name]
+                    param = self.q_net.state_dict()[param_name]
+                    target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
+            else:
+                self.target_q_net.load_state_dict(self.q_net.state_dict())           
 
         if self.kwargs.get('save_path') and self.count % self.kwargs.get('save_frequency', 1000) == 0:
             self.save()
