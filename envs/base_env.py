@@ -37,6 +37,14 @@ class BaseEnv(object):
             return self.env.action_space.shape
         raise NotImplementedError('action_space type not supported')
     
+    @property
+    def action_bound(self) -> int|tuple[int]:
+        if isinstance(self.env.action_space, gym.spaces.discrete.Discrete):
+            return None
+        elif isinstance(self.env.action_space, gym.spaces.box.Box):
+            return self.env.action_space.high
+        raise NotImplementedError('action_space type not supported')
+    
     def sample_action(self) -> int | np.ndarray:
         return self.env.action_space.sample()
 

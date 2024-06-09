@@ -3,15 +3,21 @@ import numpy as np
 import wandb
 from pathlib import Path
 
+
 from .util import OnPolicyRLModel, PolicyNetwork, ContinuousPolicyNetwork, ValueNetwork, compute_advantage
 
 
 class PPO(OnPolicyRLModel):
     
     def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, lamda=0.95, eps=0.2, epochs=10, device='cpu', **kwargs) -> None:
-        super().__init__(state_dim_or_shape, **kwargs)
-        self.state_dim_or_shape = state_dim_or_shape
-        self.action_dim_or_shape = action_dim_or_shape
+        super().__init__(state_dim_or_shape, action_dim_or_shape, **kwargs)
+        if not isinstance(state_dim_or_shape, (int, tuple, list)):
+            raise TypeError(f"state_dim_or_shape must be int, tuple or list")
+        if not isinstance(action_dim_or_shape, (int, tuple, list)):
+            raise TypeError(f"action_dim_or_shape must be int, tuple or list")
+        
+        self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
+        self.action_dim = action_dim_or_shape[0] if not isinstance(action_dim_or_shape, int) else action_dim_or_shape
         self.batch_size = batch_size
         self.hidden_dim = hidden_dim
         self.lr = lr
@@ -22,8 +28,8 @@ class PPO(OnPolicyRLModel):
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = PolicyNetwork(state_dim_or_shape, action_dim_or_shape, hidden_dim)
-        self.value_net = ValueNetwork(state_dim_or_shape, hidden_dim)
+        self.policy_net = PolicyNetwork(self.state_shape, self.action_dim, hidden_dim)
+        self.value_net = ValueNetwork(self.state_shape, hidden_dim)
 
         self.policy_net.to(device)
         self.value_net.to(device)
@@ -40,10 +46,10 @@ class PPO(OnPolicyRLModel):
                 raise ValueError('epsilon must be in (0, 1)')
 
         if epsilon and np.random.random() < epsilon:
-            action = np.random.randint(self.action_dim_or_shape)
+            action = np.random.randint(self.action_dim)
         else:
             self.policy_net.eval()
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state).detach()
             action_dist = torch.distributions.Categorical(action_prob)
             action = action_dist.sample().item()
@@ -51,8 +57,8 @@ class PPO(OnPolicyRLModel):
         return action
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
-        if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim_or_shape:
-            raise ValueError('mask must be a list or numpy array with length of action_dim_or_shape')
+        if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim:
+            raise ValueError('mask must be a list or numpy array with length of action_dim')
         
         if isinstance(mask, list):
             mask = np.array(mask)
@@ -63,10 +69,10 @@ class PPO(OnPolicyRLModel):
                 raise ValueError('epsilon must be in (0, 1)')
             
         if epsilon and np.random.random() < epsilon:
-            action = np.random.choice(self.action_dim_or_shape, p=mask/mask.sum())
+            action = np.random.choice(self.action_dim, p=mask/mask.sum())
         else:
             self.policy_net.eval()
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state).detach()
             action_prob = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
             action_dist = torch.distributions.Categorical(action_prob)
@@ -77,15 +83,15 @@ class PPO(OnPolicyRLModel):
     def predict_action(self, state) -> int:
         with torch.no_grad():
             self.policy_net.eval()
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob.argmax(dim=1).item()
             self.policy_net.train()
         return action
     
     def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
-        if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim_or_shape:
-            raise ValueError('mask must be a list or numpy array with length of action_dim_or_shape')
+        if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim:
+            raise ValueError('mask must be a list or numpy array with length of action_dim')
         
         if isinstance(mask, list):
             mask = np.array(mask)
@@ -93,7 +99,7 @@ class PPO(OnPolicyRLModel):
 
         with torch.no_grad():
             self.policy_net.eval()
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
             action = action.argmax(dim=1).item()
@@ -102,9 +108,9 @@ class PPO(OnPolicyRLModel):
     
     def update(self, transition_dict) -> None:
 
-        states = np.array(transition_dict['states']).reshape(-1, self.state_dim_or_shape)
-        actions = np.array(transition_dict['actions']).reshape(-1, 1)
-        next_states = np.array(transition_dict['next_states']).reshape(-1, self.state_dim_or_shape)
+        states = np.array(transition_dict['states']).reshape(-1, *self.state_shape)
+        actions = np.array(transition_dict['actions']).reshape((-1, 1))
+        next_states = np.array(transition_dict['next_states']).reshape(-1, *self.state_shape)
         rewards = np.array(transition_dict['rewards']).reshape(-1, 1)
         dones = np.array(transition_dict['dones']).reshape(-1, 1)
 
@@ -179,9 +185,14 @@ class PPO(OnPolicyRLModel):
 class PPOContinuous(OnPolicyRLModel):
     
     def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, lamda=0.95, eps=0.2, epochs=10, device='cpu', **kwargs) -> None:
-        super().__init__(state_dim_or_shape, **kwargs)
-        self.state_dim_or_shape = state_dim_or_shape
-        self.action_dim_or_shape = action_dim_or_shape
+        super().__init__(state_dim_or_shape, action_dim_or_shape, **kwargs)
+        if not isinstance(state_dim_or_shape, (int, tuple, list)):
+            raise TypeError(f"state_dim_or_shape must be int, tuple or list")
+        if not isinstance(action_dim_or_shape, (int, tuple, list)):
+            raise TypeError(f"action_dim_or_shape must be int, tuple or list")
+        
+        self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
+        self.action_shape = (action_dim_or_shape,) if isinstance(action_dim_or_shape, int) else tuple(action_dim_or_shape)
         self.batch_size = batch_size
         self.hidden_dim = hidden_dim
         self.lr = lr
@@ -192,8 +203,8 @@ class PPOContinuous(OnPolicyRLModel):
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = ContinuousPolicyNetwork(state_dim_or_shape, action_dim_or_shape, hidden_dim)
-        self.value_net = ValueNetwork(state_dim_or_shape, hidden_dim)
+        self.policy_net = ContinuousPolicyNetwork(self.state_shape, self.action_shape, hidden_dim)
+        self.value_net = ValueNetwork(self.state_shape, hidden_dim)
 
         self.policy_net.to(device)
         self.value_net.to(device)
@@ -207,12 +218,12 @@ class PPOContinuous(OnPolicyRLModel):
     def take_action(self, state) -> np.ndarray:
         with torch.no_grad():
             self.policy_net.eval()
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             mu, std = self.policy_net(state)
-            action_dist = torch.distributions.Normal(mu, std)
-            action = action_dist.sample().cpu().numpy().reshape(self.action_dim_or_shape)
+            action_dist = torch.distributions.Normal(mu, std + 1e-6)
+            action = action_dist.sample().cpu().numpy()
             self.policy_net.train()
-        return action
+        return np.reshape(action, self.action_shape)
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
         raise NotImplementedError('take_action_with_mask is not implemented')
@@ -220,21 +231,20 @@ class PPOContinuous(OnPolicyRLModel):
     def predict_action(self, state) -> np.ndarray:
         with torch.no_grad():
             self.policy_net.eval()
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             mu, _ = self.policy_net(state)
-            action = mu.detach().cpu().numpy().reshape(self.action_dim_or_shape)
+            action = mu.cpu().numpy()
             self.policy_net.train()
-        return action
+        return np.reshape(action, self.action_shape)
     
     def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
         raise NotImplementedError('predict_action_with_mask is not implemented')
     
     def update(self, transition_dict) -> None:
-        state_shape = (-1, self.state_dim_or_shape) if isinstance(self.state_dim_or_shape, int) else (-1,) + self.state_dim_or_shape
-        action_shape = (-1, self.action_dim_or_shape) if isinstance(self.action_dim_or_shape, int) else (-1,) + self.action_dim_or_shape
-        states = np.array(transition_dict['states']).reshape(state_shape)
-        actions = np.array(transition_dict['actions']).reshape(action_shape)
-        next_states = np.array(transition_dict['next_states']).reshape(state_shape)
+
+        states = np.array(transition_dict['states']).reshape(-1, *self.state_shape)
+        actions = np.array(transition_dict['actions']).reshape(-1, *self.action_shape)
+        next_states = np.array(transition_dict['next_states']).reshape(-1, *self.state_shape)
         rewards = np.array(transition_dict['rewards']).reshape(-1, 1)
         dones = np.array(transition_dict['dones']).reshape(-1, 1)
 
@@ -250,7 +260,7 @@ class PPOContinuous(OnPolicyRLModel):
             td_delta = td_target - self.value_net(states)
 
             mu, std = self.policy_net(states)
-            action_dist = torch.distributions.Normal(mu, std)
+            action_dist = torch.distributions.Normal(mu, std + 1e-6)
             old_log_probs = action_dist.log_prob(actions)
 
         advantages = compute_advantage(gamma=self.gamma, lamda=self.lamda, td_delta=td_delta).to(self.device)
@@ -258,7 +268,7 @@ class PPOContinuous(OnPolicyRLModel):
         for _ in range(self.epochs):
 
             mu, std = self.policy_net(states)
-            action_dist = torch.distributions.Normal(mu, std)
+            action_dist = torch.distributions.Normal(mu, std + 1e-6)
             log_probs = action_dist.log_prob(actions)
             # 限制log_prob - old_log_prob 在较小的范围内，避免torch.exp(log_prob_gap)溢出
             log_prob_gap = torch.clamp(log_probs - old_log_probs, -1, 1)

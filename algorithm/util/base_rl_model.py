@@ -3,7 +3,7 @@ from . import ReplayBuffer
 
 class OffPolicyRLModel(object):
 
-    def __init__(self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000, **kwargs) -> None:
         self.replay_buffer = ReplayBuffer(state_dim_or_shape, action_dim_or_shape, capacity)
         self.count = 0
     
@@ -31,6 +31,6 @@ class OffPolicyRLModel(object):
 
         
 class OnPolicyRLModel(object):
-    def __init__(self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000, **kwargs) -> None:
         self.count = 0
     

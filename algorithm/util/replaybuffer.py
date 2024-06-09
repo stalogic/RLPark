@@ -2,7 +2,7 @@ import numpy as np
 
 class ReplayBuffer(object):
 
-    def __init__(self, state_shape:int|tuple|list, action_shape:int|tuple|list=1, capacity=10000):
+    def __init__(self, state_dim_or_shape:int|tuple|list, action_dim_or_shape:int|tuple|list=1, capacity=10000):
         """
         Replay buffer for RL
         :param state_shape: 目前仅支持一维状态
@@ -13,21 +13,16 @@ class ReplayBuffer(object):
         self.len = 0
         self.index = 0
 
-        if not isinstance(state_shape, (int, tuple, list)):
-            raise ValueError('state_shape must be int or tuple or list')
-        if isinstance(state_shape, int):
-            self.state_shape = (state_shape, )
-        elif isinstance(state_shape, list):
-            self.state_shape = tuple(state_shape)
+        if not isinstance(state_dim_or_shape, (int, tuple, list)):
+            raise ValueError('state_dim_or_shape must be int or tuple or list')
+        if not isinstance(action_dim_or_shape, (int, tuple, list)):
+            raise ValueError('action_dim_or_shape must be int or tuple or list')
+        
+        self.state_shape = (state_dim_or_shape, ) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
+        self.action_shape = (1,) if isinstance(action_dim_or_shape, int) else tuple(action_dim_or_shape)
+
         self.states = np.zeros((capacity, ) + self.state_shape, dtype=np.float32)
         self.next_states = np.zeros((capacity, ) + self.state_shape, dtype=np.float32)
-
-        if not isinstance(action_shape, (int, tuple, list)):
-            raise ValueError('action_shape must be int or tuple or list')
-        if isinstance(action_shape, int):
-            self.action_shape = (action_shape, )
-        elif isinstance(action_shape, list):
-            self.action_shape = tuple(action_shape)
         self.actions = np.zeros((capacity,) + self.action_shape, dtype=np.float32)
 
         self.rewards = np.zeros((capacity, 1), dtype=np.float32)

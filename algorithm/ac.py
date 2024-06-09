@@ -9,8 +9,12 @@ class OffPolicyActorCritic(OffPolicyRLModel):
     
     def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
         super().__init__(state_dim_or_shape, **kwargs)
-        self.state_dim_or_shape = state_dim_or_shape
-        self.action_dim_or_shape = action_dim_or_shape
+        if not isinstance(state_dim_or_shape, (int, tuple, list)):
+            raise TypeError(f"state_dim_or_shape must be int, tuple or list")
+        if not isinstance(action_dim_or_shape, (int, tuple, list)):
+            raise TypeError(f"action_dim_or_shape must be int, tuple or list")
+        self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
+        self.action_dim = action_dim_or_shape[0] if not isinstance(action_dim_or_shape, int) else action_dim_or_shape
         self.batch_size = batch_size
         self.hidden_dim = hidden_dim
         self.lr = lr
@@ -18,8 +22,8 @@ class OffPolicyActorCritic(OffPolicyRLModel):
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = PolicyNetwork(state_dim_or_shape, action_dim_or_shape, hidden_dim)
-        self.value_net = ValueNetwork(state_dim_or_shape, hidden_dim)
+        self.policy_net = PolicyNetwork(self.state_shape, self.action_dim, hidden_dim)
+        self.value_net = ValueNetwork(self.state_shape, hidden_dim)
         self.target_policy_net = copy.deepcopy(self.policy_net)
         self.target_value_net = copy.deepcopy(self.value_net)
 
@@ -42,9 +46,9 @@ class OffPolicyActorCritic(OffPolicyRLModel):
                 raise ValueError('epsilon must be in (0, 1)')
 
         if epsilon and np.random.random() < epsilon:
-            action = np.random.randint(self.action_dim_or_shape)
+            action = np.random.randint(self.action_dim)
         else:
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.target_policy_net(state)
             action_dist = torch.distributions.Categorical(action_prob)
             action = action_dist.sample().item()
@@ -64,9 +68,9 @@ class OffPolicyActorCritic(OffPolicyRLModel):
                 raise ValueError('epsilon must be in (0, 1)')
             
         if epsilon and np.random.random() < epsilon:
-            action = np.random.choice(self.action_dim_or_shape, p=mask/mask.sum())
+            action = np.random.choice(self.action_dim, p=mask/mask.sum())
         else:
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.target_policy_net(state)
             action_prob = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
             action_dist = torch.distributions.Categorical(action_prob)
@@ -77,7 +81,7 @@ class OffPolicyActorCritic(OffPolicyRLModel):
     def predict_action(self, state) -> int:
         self.policy_net.eval()
         with torch.no_grad():
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob.argmax(dim=1).item()
         self.policy_net.train()
@@ -93,7 +97,7 @@ class OffPolicyActorCritic(OffPolicyRLModel):
 
         self.policy_net.eval()
         with torch.no_grad():
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
             action = action.argmax(dim=1).item()
@@ -184,9 +188,13 @@ class OffPolicyActorCritic(OffPolicyRLModel):
 class OffPolicyActorCriticContinuous(OffPolicyRLModel):
     
     def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
-        super().__init__(state_dim_or_shape, **kwargs)
-        self.state_dim_or_shape = state_dim_or_shape
-        self.action_dim_or_shape = action_dim_or_shape
+        super().__init__(state_dim_or_shape, action_dim_or_shape, **kwargs)
+        if not isinstance(state_dim_or_shape, (int, tuple, list)):
+            raise TypeError(f"state_dim_or_shape must be int, tuple or list")
+        if not isinstance(action_dim_or_shape, (int, tuple, list)):
+            raise TypeError(f"action_dim_or_shape must be int, tuple or list")
+        self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
+        self.action_shape = (action_dim_or_shape,) if isinstance(action_dim_or_shape, int) else tuple(action_dim_or_shape)
         self.batch_size = batch_size
         self.hidden_dim = hidden_dim
         self.lr = lr
@@ -194,8 +202,8 @@ class OffPolicyActorCriticContinuous(OffPolicyRLModel):
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = ContinuousPolicyNetwork(state_dim_or_shape, action_dim_or_shape, hidden_dim)
-        self.value_net = ValueNetwork(state_dim_or_shape, hidden_dim)
+        self.policy_net = ContinuousPolicyNetwork(self.state_shape, self.action_shape, hidden_dim)
+        self.value_net = ValueNetwork(self.state_shape, hidden_dim)
         self.target_policy_net = copy.deepcopy(self.policy_net)
         self.target_value_net = copy.deepcopy(self.value_net)
 
@@ -213,10 +221,10 @@ class OffPolicyActorCriticContinuous(OffPolicyRLModel):
 
 
     def take_action(self, state) -> np.ndarray:
-        state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+        state = torch.tensor(state, dtype=torch.float32).to(self.device)
         mu, std = self.target_policy_net(state)
-        action_dist = torch.distributions.Normal(mu, std)
-        action = action_dist.sample().cpu().numpy().reshape(self.action_dim_or_shape)
+        action_dist = torch.distributions.Normal(mu, std + 1e-6)
+        action = action_dist.sample().cpu().numpy().reshape(self.action_shape)
         return action
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -225,9 +233,9 @@ class OffPolicyActorCriticContinuous(OffPolicyRLModel):
     def predict_action(self, state) -> np.ndarray:
         self.policy_net.eval()
         with torch.no_grad():
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             mu, _ = self.policy_net(state)
-            action = mu.cpu().numpy().reshape(self.action_dim_or_shape)
+            action = mu.cpu().numpy().reshape(self.action_shape)
         self.policy_net.train()
         return action
     
@@ -254,7 +262,7 @@ class OffPolicyActorCriticContinuous(OffPolicyRLModel):
         
         value_loss = torch.nn.functional.mse_loss(v_value, td_target)
         mu, std = self.policy_net(states)
-        action_dist = torch.distributions.Normal(mu, std)
+        action_dist = torch.distributions.Normal(mu, std + 1e-6)
         log_prob = action_dist.log_prob(actions)
         policy_loss = torch.mean(-log_prob * td_delta)
 
@@ -320,9 +328,13 @@ class OffPolicyActorCriticContinuous(OffPolicyRLModel):
 class ActorCritic(OnPolicyRLModel):
     
     def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
-        super().__init__(state_dim_or_shape, **kwargs)
-        self.state_dim_or_shape = state_dim_or_shape
-        self.action_dim_or_shape = action_dim_or_shape
+        super().__init__(state_dim_or_shape, action_dim_or_shape, **kwargs)
+        if not isinstance(state_dim_or_shape, (int, tuple, list)):
+            raise TypeError(f"state_dim_or_shape must be int, tuple or list")
+        if not isinstance(action_dim_or_shape, (int, tuple, list)):
+            raise TypeError(f"action_dim_or_shape must be int, tuple or list")
+        self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
+        self.action_dim = action_dim_or_shape[0] if not isinstance(action_dim_or_shape, int) else action_dim_or_shape
         self.batch_size = batch_size
         self.hidden_dim = hidden_dim
         self.lr = lr
@@ -330,8 +342,8 @@ class ActorCritic(OnPolicyRLModel):
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = PolicyNetwork(state_dim_or_shape, action_dim_or_shape, hidden_dim)
-        self.value_net = ValueNetwork(state_dim_or_shape, hidden_dim)
+        self.policy_net = PolicyNetwork(self.state_shape, self.action_dim, hidden_dim)
+        self.value_net = ValueNetwork(self.state_shape, hidden_dim)
 
         self.policy_net.to(device)
         self.value_net.to(device)
@@ -348,10 +360,10 @@ class ActorCritic(OnPolicyRLModel):
                 raise ValueError('epsilon must be in (0, 1)')
 
         if epsilon and np.random.random() < epsilon:
-            action = np.random.randint(self.action_dim_or_shape)
+            action = np.random.randint(self.action_dim)
         else:
             self.policy_net.eval()
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state).detach()
             action_dist = torch.distributions.Categorical(action_prob)
             action = action_dist.sample().item()
@@ -359,8 +371,8 @@ class ActorCritic(OnPolicyRLModel):
         return action
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
-        if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim_or_shape:
-            raise ValueError('mask must be a list or numpy array with length of action_dim_or_shape')
+        if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim:
+            raise ValueError('mask must be a list or numpy array with length of action_dim')
         
         if isinstance(mask, list):
             mask = np.array(mask)
@@ -371,10 +383,10 @@ class ActorCritic(OnPolicyRLModel):
                 raise ValueError('epsilon must be in (0, 1)')
             
         if epsilon and np.random.random() < epsilon:
-            action = np.random.choice(self.action_dim_or_shape, p=mask/mask.sum())
+            action = np.random.choice(self.action_dim, p=mask/mask.sum())
         else:
             self.policy_net.eval()
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state).detach()
             action_prob = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
             action_dist = torch.distributions.Categorical(action_prob)
@@ -385,15 +397,15 @@ class ActorCritic(OnPolicyRLModel):
     def predict_action(self, state) -> int:
         with torch.no_grad():
             self.policy_net.eval()
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob.argmax(dim=1).item()
             self.policy_net.train()
         return action
     
     def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
-        if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim_or_shape:
-            raise ValueError('mask must be a list or numpy array with length of action_dim_or_shape')
+        if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim:
+            raise ValueError('mask must be a list or numpy array with length of action_dim')
         
         if isinstance(mask, list):
             mask = np.array(mask)
@@ -401,7 +413,7 @@ class ActorCritic(OnPolicyRLModel):
 
         with torch.no_grad():
             self.policy_net.eval()
-            state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
             action = action.argmax(dim=1).item()
@@ -410,9 +422,9 @@ class ActorCritic(OnPolicyRLModel):
     
     def update(self, transition_dict) -> None:
 
-        states = np.array(transition_dict['states']).reshape(-1, self.state_dim_or_shape)
+        states = np.array(transition_dict['states']).reshape(-1, *self.state_shape)
+        next_states = np.array(transition_dict['next_states']).reshape(-1, *self.state_shape)
         actions = np.array(transition_dict['actions']).reshape(-1, 1)
-        next_states = np.array(transition_dict['next_states']).reshape(-1, self.state_dim_or_shape)
         rewards = np.array(transition_dict['rewards']).reshape(-1, 1)
         dones = np.array(transition_dict['dones']).reshape(-1, 1)
 
@@ -481,8 +493,12 @@ class ActorCriticContinuous(OnPolicyRLModel):
     
     def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
         super().__init__(state_dim_or_shape, **kwargs)
-        self.state_dim_or_shape = state_dim_or_shape
-        self.action_dim_or_shape = action_dim_or_shape
+        if not isinstance(state_dim_or_shape, (int, tuple, list)):
+            raise TypeError(f"state_dim_or_shape must be int, tuple or list")
+        if not isinstance(action_dim_or_shape, (int, tuple, list)):
+            raise TypeError(f"action_dim_or_shape must be int, tuple or list")
+        self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
+        self.action_shape = (action_dim_or_shape,) if isinstance(action_dim_or_shape, int) else tuple(action_dim_or_shape)
         self.batch_size = batch_size
         self.hidden_dim = hidden_dim
         self.lr = lr
@@ -490,8 +506,8 @@ class ActorCriticContinuous(OnPolicyRLModel):
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = ContinuousPolicyNetwork(state_dim_or_shape, action_dim_or_shape, hidden_dim)
-        self.value_net = ValueNetwork(state_dim_or_shape, hidden_dim)
+        self.policy_net = ContinuousPolicyNetwork(self.state_shape, self.action_shape, hidden_dim)
+        self.value_net = ValueNetwork(self.state_shape, hidden_dim)
 
         self.policy_net.to(device)
         self.value_net.to(device)
@@ -504,10 +520,10 @@ class ActorCriticContinuous(OnPolicyRLModel):
 
     def take_action(self, state) -> np.ndarray:
         self.policy_net.eval()
-        state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+        state = torch.tensor(state, dtype=torch.float32).to(self.device)
         mu, std = self.policy_net(state)
-        action_dist = torch.distributions.Normal(mu.detach(), std.detach())
-        action = action_dist.sample().cpu().numpy().reshape(self.action_dim_or_shape)
+        action_dist = torch.distributions.Normal(mu.detach(), std.detach() + 1e-6)
+        action = action_dist.sample().cpu().numpy().reshape(self.action_shape)
         self.policy_net.train()
         return action
     
@@ -516,9 +532,9 @@ class ActorCriticContinuous(OnPolicyRLModel):
     
     def predict_action(self, state) -> np.ndarray:
         self.policy_net.eval()
-        state = torch.tensor(state.reshape(-1, self.state_dim_or_shape), dtype=torch.float32).to(self.device)
+        state = torch.tensor(state, dtype=torch.float32).to(self.device)
         mu, _ = self.policy_net(state)
-        action = mu.detach().cpu().numpy().reshape(self.action_dim_or_shape)
+        action = mu.detach().cpu().numpy().reshape(self.action_shape)
         self.policy_net.train()
         return action
     
@@ -526,9 +542,9 @@ class ActorCriticContinuous(OnPolicyRLModel):
         raise NotImplementedError('predict_action_with_mask is not implemented')
     
     def update(self, transition_dict) -> None:
-        states = np.array(transition_dict['states']).reshape(-1, self.state_dim_or_shape)
-        actions = np.array(transition_dict['actions']).reshape(-1, *self.action_dim_or_shape)
-        next_states = np.array(transition_dict['next_states']).reshape(-1, self.state_dim_or_shape)
+        states = np.array(transition_dict['states']).reshape(-1, *self.state_shape)
+        next_states = np.array(transition_dict['next_states']).reshape(-1, *self.state_shape)
+        actions = np.array(transition_dict['actions']).reshape(-1, *self.action_shape)
         rewards = np.array(transition_dict['rewards']).reshape(-1, 1)
         dones = np.array(transition_dict['dones']).reshape(-1, 1)
 
@@ -547,7 +563,7 @@ class ActorCriticContinuous(OnPolicyRLModel):
         
         value_loss = torch.nn.functional.mse_loss(v_value, td_target)
         mu, std = self.policy_net(states)
-        action_dist = torch.distributions.Normal(mu, std)
+        action_dist = torch.distributions.Normal(mu, std + 1e-6)
         log_prob = action_dist.log_prob(actions)
         policy_loss = torch.mean(-log_prob * td_delta)
 

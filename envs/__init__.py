@@ -3,11 +3,11 @@ from .classic_control import mountain_car_v0, mountain_car_v1, mountain_car_v2, 
 
 def list_discrete_envs():
     return [
-        "mountain_car_v0",
+        # "mountain_car_v0",
         "mountain_car_v1",
         "mountain_car_v2",
         "mountain_car_v3",
-        "cart_pole_v0",
+        # "cart_pole_v0",
         "cart_pole_v1",
         "acrobot_v1",
     ]
@@ -19,9 +19,9 @@ from .classic_control import pendulum_v1, pendulum_v2, mountain_car_continuous_v
 
 def list_continuous_envs():
     return [
-        "pendulum_v1",
+        # "pendulum_v1",
         "pendulum_v2",
-        "mountain_car_continuous_v0",
+        # "mountain_car_continuous_v0",
         "mountain_car_continuous_v1",
         "mountain_car_continuous_v2",
         "mountain_car_continuous_v3"

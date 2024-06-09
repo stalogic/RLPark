@@ -19,23 +19,24 @@ from envs import {env_name} as make_env
 
 env = make_env()
 print(env)
-state_dim = env.state_dim_or_shape
-action_dim = env.action_dim_or_shape
 hidden_dim = {hidden_dim}
 batch_size = {batch_size}
 num_episodes = {num_episodes}
 
 wandb.init(project="{env_name}",
             config={{
-               "state_dim": state_dim,
-               "action_dim": action_dim,
+               "state_dim": env.state_dim_or_shape,
+               "action_dim": env.action_dim_or_shape,
                "hidden_dim": hidden_dim,
                "batch_size": batch_size,
                "num_episodes": num_episodes,
                "algorithm": "{algo_name}"
             }})
 
-agent = {algo_name}(state_dim, action_dim, hidden_dim, batch_size)
+agent = {algo_name}(env.state_dim_or_shape, env.action_dim_or_shape, 
+                        hidden_dim=hidden_dim, 
+                        batch_size=batch_size,
+                        action_bound=env.action_bound,)
 
 train_and_evaluate(env, agent, num_episodes)
 """

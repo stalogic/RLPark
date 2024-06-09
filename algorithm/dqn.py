@@ -8,10 +8,15 @@ from .util import OffPolicyRLModel, QValueNetwork
 
 class DQN(OffPolicyRLModel):
     
-    def __init__(self, state_dim, action_dim, hidden_dim=32, batch_size=128, epsilon=0.1, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
-        super().__init__(state_dim, **kwargs)
-        self.state_dim = state_dim
-        self.action_dim = action_dim
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, epsilon=0.1, lr=1e-3, gamma=0.99, device='cpu', capacity=10000, **kwargs) -> None:
+        super().__init__(state_dim_or_shape, action_dim_or_shape, capacity)
+        if not isinstance(state_dim_or_shape, (int, tuple, list)):
+            raise TypeError('state_dim_or_shape must be int, tuple or list')
+        if not isinstance(action_dim_or_shape, (int, tuple, list)):
+            raise TypeError('action_dim_or_shape must be int, tuple or list')
+        
+        self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
+        self.action_dim = action_dim_or_shape[0] if not isinstance(action_dim_or_shape, int) else action_dim_or_shape
         self.batch_size = batch_size
         self.hidden_dim = hidden_dim
         self.epsilon = epsilon
@@ -20,7 +25,7 @@ class DQN(OffPolicyRLModel):
         self.device = device
         self.kwargs = kwargs
 
-        self.q_net = QValueNetwork(state_dim, action_dim, hidden_dim)
+        self.q_net = QValueNetwork(self.state_shape, self.action_dim, hidden_dim)
         self.target_q_net = copy.deepcopy(self.q_net)
 
         self.q_net.to(device)
@@ -34,7 +39,7 @@ class DQN(OffPolicyRLModel):
         if np.random.random() < self.epsilon:
             action = np.random.randint(self.action_dim)
         else:
-            state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float).to(self.device)
+            state = torch.tensor(state, dtype=torch.float).to(self.device)
             action = self.target_q_net(state).detach().argmax().item()
         return action
     
@@ -48,7 +53,7 @@ class DQN(OffPolicyRLModel):
         if np.random.random() < self.epsilon:
             action = np.random.choice(self.action_dim, p=mask/mask.sum())
         else:
-            state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float).to(self.device)
+            state = torch.tensor(state, dtype=torch.float).to(self.device)
             q_value = self.target_q_net(state).detach().numpy()
             q_value[:, mask == 0] = -np.inf
             action = q_value.argmax()
@@ -59,7 +64,7 @@ class DQN(OffPolicyRLModel):
     def predict_action(self, state) -> int:
         self.q_net.eval()
         with torch.no_grad():
-            state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float).to(self.device)
+            state = torch.tensor(state, dtype=torch.float).to(self.device)
             action = self.q_net(state).argmax().item()
         self.q_net.train()
         return action
@@ -73,7 +78,7 @@ class DQN(OffPolicyRLModel):
         
         self.q_net.eval()
         with torch.no_grad():
-            state = torch.tensor(state.reshape(-1, self.state_dim), dtype=torch.float).to(self.device)
+            state = torch.tensor(state, dtype=torch.float).to(self.device)
             q_value = self.q_net(state).detach().numpy()
             q_value[:, mask == 0] = -np.inf
             action = q_value.argmax()
@@ -107,14 +112,13 @@ class DQN(OffPolicyRLModel):
         except: pass
 
         self.count += 1
-        if self.count % self.kwargs.get('target_update_frequency', 100) == 0:
-            if (tau:=self.kwargs.get('tau')):
-                for param_name in self.q_net.state_dict().keys():
-                    target_param = self.target_q_net.state_dict()[param_name]
-                    param = self.q_net.state_dict()[param_name]
-                    target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
-            else:
-                self.target_q_net.load_state_dict(self.q_net.state_dict())           
+        if tau:=self.kwargs.get('tau'):
+            for param_name in self.q_net.state_dict().keys():
+                target_param = self.target_q_net.state_dict()[param_name]
+                param = self.q_net.state_dict()[param_name]
+                target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
+        elif self.count % self.kwargs.get('target_update_frequency', 100) == 0:
+            self.target_q_net.load_state_dict(self.q_net.state_dict())           
 
         if self.kwargs.get('save_path') and self.count % self.kwargs.get('save_frequency', 1000) == 0:
             self.save()
