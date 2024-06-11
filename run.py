@@ -16,4 +16,4 @@ for env_name in envs.CONTINUOUS_ENV_LIST:
         path = generate_python_script(algo_name, env_name)
         cmd = f"python {path}"
         print(cmd)
-        os.system(cmd)
+        # os.system(cmd)

@@ -2,9 +2,10 @@ from .ac import OffPolicyActorCritic, OffPolicyActorCriticContinuous, ActorCriti
 from .dqn import DQN
 from .ppo import PPO, PPOContinuous
 from .ddpg import DDPG
+from .sac import SAC
 
 def list_discrete_algorithms():
-    return ['OffPolicyActorCritic', 'ActorCritic', 'DQN', 'PPO']
+    return ['OffPolicyActorCritic', 'ActorCritic', 'DQN', 'PPO', 'SAC']
 
 DISCRETE_ALGO_LIST = list_discrete_algorithms()
 

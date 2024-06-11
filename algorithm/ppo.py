@@ -62,7 +62,7 @@ class PPO(OnPolicyRLModel):
         
         if isinstance(mask, list):
             mask = np.array(mask)
-        mask = mask.astype(int)
+        mask = mask.astype(np.float32)
 
         if epsilon := self.kwargs.get('epsilon'):
             if  epsilon > 1 or epsilon < 0:
