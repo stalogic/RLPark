@@ -194,7 +194,7 @@ class SACContinuous(OffPolicyRLModel):
         self.action_shape = (action_dim_or_shape,) if isinstance(action_dim_or_shape, int) else tuple(action_dim_or_shape)
         self.batch_size = batch_size
         self.hidden_dim = hidden_dim
-        self.action_bound = action_bound
+        self.action_bound = torch.tensor(action_bound, dtype=torch.float32, device=device)
         self.lr = lr
         self.gamma = gamma
         self.tau = tau
@@ -238,15 +238,12 @@ class SACContinuous(OffPolicyRLModel):
         return np.reshape(action.cpu().numpy(), self.action_shape)
     
     def _calc_action_log_prob(self, state:list|np.ndarray) -> torch.Tensor:
-        state = torch.tensor(state, dtype=torch.float32, device=self.device)
         mu, std = self.policy_net(state)
         action_dist = torch.distributions.Normal(mu, std)
         log_prob = action_dist.log_prob(mu)
         sample = action_dist.rsample()
         action = torch.tanh(sample)
-        # log_prob = log_prob - torch.log(1 - torch.tanh(action).pow(2) + 1e-7)
         log_prob = log_prob - torch.log(1 - action.square() + 1e-7)
-        torch.square()
         action = action * self.action_bound
         return action, log_prob
     

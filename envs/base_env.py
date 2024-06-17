@@ -4,9 +4,9 @@ import wandb
 
 class BaseEnv(object):
 
-    def __init__(self, env_name) -> None:
+    def __init__(self, env_name, **kwargs) -> None:
         self.env_name = env_name
-        self.env = gym.make(env_name)
+        self.env = gym.make(env_name, **kwargs)
 
         self.total_reward = 0.0
         self.total_raw_reward = 0.0

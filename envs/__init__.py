@@ -1,5 +1,6 @@
 
 from .classic_control import mountain_car_v0, mountain_car_v1, mountain_car_v2, mountain_car_v3, cart_pole_v0, cart_pole_v1, acrobot_v1
+from .atari_game import pong_v0
 
 def list_discrete_envs():
     return [
@@ -10,6 +11,8 @@ def list_discrete_envs():
         # "cart_pole_v0",
         "cart_pole_v1",
         "acrobot_v1",
+        # atari games
+        "pong_v0",
     ]
 
 DISCRETE_ENV_LIST = list_discrete_envs()

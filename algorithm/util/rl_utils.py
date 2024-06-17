@@ -4,7 +4,7 @@ import numpy as np
 import wandb
 
 def compute_advantage(gamma, lamda, td_delta):
-    td_delta = td_delta.detach().numpy()
+    td_delta = td_delta.detach().cpu().numpy()
     advantage_list = []
     advantage = 0.0
     for delta in td_delta[::-1]:

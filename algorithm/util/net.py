@@ -1,169 +1,52 @@
 import torch
-import numpy as np
+
+
+class MLPNetwork(torch.nn.Module):
     
+    def __init__(self, input_dim:int, output_dim:int, layers:tuple, activation=torch.nn.ReLU(), batch_norm:bool=True, dropout:float=None, input_norm:bool=False, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
-class ValueNetwork(torch.nn.Module):
+        if dropout and not (0.0 < dropout < 1.0):
+            raise ValueError("dropout must be between 0 and 1")
 
-    def __init__(self, state_shape:tuple, hidden_dim:int):
-        super(ValueNetwork, self).__init__()
-        self.state_shape = state_shape
-        self.fc1 = torch.nn.Linear(np.prod(self.state_shape), hidden_dim)
-        self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = torch.nn.Linear(hidden_dim, 1)
-        self.bn0 = torch.nn.BatchNorm1d(np.prod(self.state_shape))
-        self.bn1 = torch.nn.BatchNorm1d(hidden_dim)
-        self.bn2 = torch.nn.BatchNorm1d(hidden_dim)
-        self.relu = torch.nn.ReLU()
+        
 
-    def forward(self, s):
-        s = torch.reshape(s, (-1, np.prod(self.state_shape)))
-        x = self.bn0(s)
-        x = self.relu(self.bn1(self.fc1(x)))
-        x = self.relu(self.bn2(self.fc2(x)))
-        x = self.fc3(x)
+        self.mlp = torch.nn.ModuleList()
+        if input_norm:
+            self.mlp.append(torch.nn.BatchNorm1d(input_dim))
+        in_dim = input_dim
+        for out_dim in layers:
+            self.mlp.append(torch.nn.Linear(in_dim, out_dim))
+            if batch_norm:
+                self.mlp.append(torch.nn.BatchNorm1d(out_dim))
+            self.mlp.append(activation)
+            if dropout:
+                self.mlp.append(torch.nn.Dropout(p=dropout))
+            in_dim = out_dim
+        self.mlp.append(torch.nn.Linear(in_dim, output_dim))
+
+        print(self)
+
+    def forward(self, x):
+        for layer in self.mlp:
+            x = layer(x)
         return x
-    
-
-class QValueNetwork(torch.nn.Module):
-
-    def __init__(self, state_shape:tuple, action_dim:int, hidden_dim:int):
-        super(QValueNetwork, self).__init__()
-        self.state_shape = state_shape
-        self.action_dim = action_dim
-        self.fc1 = torch.nn.Linear(np.prod(self.state_shape), hidden_dim)
-        self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = torch.nn.Linear(hidden_dim, action_dim)
-        self.bn0 = torch.nn.BatchNorm1d(np.prod(self.state_shape))
-        self.bn1 = torch.nn.BatchNorm1d(hidden_dim)
-        self.bn2 = torch.nn.BatchNorm1d(hidden_dim)
-        self.relu = torch.nn.ReLU()
-
-    def forward(self, s):
-        s = torch.reshape(s, (-1, np.prod(self.state_shape)))
-        x = self.bn0(s)
-        x = self.relu(self.bn1(self.fc1(x)))
-        x = self.relu(self.bn2(self.fc2(x)))
-        x = self.fc3(x)
-        return x
-    
-
-class ContinuousQValueNetwork(torch.nn.Module):
-    
-    def __init__(self, state_shape:tuple, action_shape:tuple, hidden_dim:int):
-        super(ContinuousQValueNetwork, self).__init__()
-        self.state_shape = state_shape
-        self.action_shape = action_shape
-
-        self.fc1 = torch.nn.Linear(np.prod(self.state_shape) + np.prod(self.action_shape), hidden_dim)
-        self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = torch.nn.Linear(hidden_dim, 1)
-
-        self.bn0 = torch.nn.BatchNorm1d(np.prod(self.state_shape) + np.prod(self.action_shape))
-        self.bn1 = torch.nn.BatchNorm1d(hidden_dim)
-        self.bn2 = torch.nn.BatchNorm1d(hidden_dim)
-
-        self.relu1 = torch.nn.ReLU()
-        self.relu2 = torch.nn.ReLU()
 
 
-    def forward(self, s, a) -> torch.Tensor:
-        s = torch.reshape(s, (-1, np.prod(self.state_shape)))
-        a = torch.reshape(a, (-1, np.prod(self.action_shape)))
-        x = torch.cat((s, a), dim=1)
-        x = self.bn0(x)
-        x = self.relu1(self.bn1(self.fc1(x)))
-        x = self.relu2(self.bn2(self.fc2(x)))
-        x = self.fc3(x)
-        return x
-    
+class CNNNetwork(torch.nn.Module):
 
-class PolicyNetwork(torch.nn.Module):
+    def __init__(self,input_channels:int, output_dim:int, conv_layers:tuple, activate_fn=torch.nn.ReLU(), batch_norm:bool=True, dorpout:float=None, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
-    def __init__(self, state_shape:tuple, action_dim:int, hidden_dim:int):
-        super(PolicyNetwork, self).__init__()
-        self.state_shape = state_shape
-        self.action_dim = action_dim
-        self.fc1 = torch.nn.Linear(np.prod(self.state_shape), hidden_dim)
-        self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = torch.nn.Linear(hidden_dim, self.action_dim)
-        self.bn0 = torch.nn.BatchNorm1d(np.prod(self.state_shape))
-        self.bn1 = torch.nn.BatchNorm1d(hidden_dim)
-        self.bn2 = torch.nn.BatchNorm1d(hidden_dim)
-        self.bn3 = torch.nn.BatchNorm1d(self.action_dim)
-        self.relu = torch.nn.ReLU()
-        self.softmax = torch.nn.Softmax(dim=1)
+        self.conv_layers = torch.nn.ModuleList()
+        self.pool_layers = torch.nn.ModuleList()
 
-    def forward(self, s):
-        s = torch.reshape(s, (-1, np.prod(self.state_shape)))
-        x = self.bn0(s)
-        x = self.relu(self.bn1(self.fc1(x)))
-        x = self.relu(self.bn2(self.fc2(x)))
-        x = self.bn3(self.fc3(x))
-        x = self.softmax(x)
-        return x
-    
+        for i, (out_channels, kernel_size) in enumerate(conv_layers):
+            in_channels = input_channels if i == 0 else conv_layers[i-1][0]
+            self.conv_layers.append(torch.nn.Conv2d(in_channels, out_channels, kernel_size))
+            if batch_norm:
+                self.conv_layers.append(torch.nn.BatchNorm2d(out_channels))
+            self.conv_layers.append(torch.nn.ReLU())
 
-class ContinuousPolicyNetwork(torch.nn.Module):
-
-    def __init__(self, state_shape:tuple, action_shape:tuple, hidden_dim:int):
-        super(ContinuousPolicyNetwork, self).__init__()
-        self.state_shape = state_shape
-        self.action_shape = action_shape
-
-        self.fc1 = torch.nn.Linear(np.prod(state_shape), hidden_dim)
-        self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.fc_mu = torch.nn.Linear(hidden_dim, np.prod(self.action_shape))
-        self.fc_std = torch.nn.Linear(hidden_dim, np.prod(self.action_shape))
-
-        self.bn0 = torch.nn.BatchNorm1d(np.prod(state_shape))
-        self.bn1 = torch.nn.BatchNorm1d(hidden_dim)
-        self.bn2 = torch.nn.BatchNorm1d(hidden_dim)
-        self.bn_mu = torch.nn.BatchNorm1d(np.prod(self.action_shape))
-        self.bn_std = torch.nn.BatchNorm1d(np.prod(self.action_shape))
-
-        self.relu1 = torch.nn.ReLU()
-        self.relu2 = torch.nn.ReLU()
-        self.softplus = torch.nn.Softplus()
-
-    def forward(self, s):
-        s = torch.reshape(s, (-1, np.prod(self.state_shape)))
-        x = self.bn0(s)
-        x = self.relu1(self.bn1(self.fc1(x)))
-        x = self.relu2(self.bn2(self.fc2(x)))
-        mu = self.bn_mu(self.fc_mu(x))
-        std = self.softplus(self.bn_std(self.fc_std(x)))
-        mu = torch.reshape(mu, (-1,) + self.action_shape)
-        std = torch.reshape(std, (-1,) + self.action_shape)
-        return mu, std
-    
-
-class DeterministicPolicyNetwork(torch.nn.Module):
-    
-    def __init__(self, state_shape:tuple, action_shape:tuple, action_bound:float|np.ndarray, hidden_dim:int):
-        super(DeterministicPolicyNetwork, self).__init__()
-        self.state_shape = state_shape
-        self.action_shape = action_shape
-        self.action_bound = torch.tensor(action_bound)
-
-        self.fc1 = torch.nn.Linear(np.prod(state_shape), hidden_dim)
-        self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = torch.nn.Linear(hidden_dim, np.prod(action_shape))
-
-        self.bn0 = torch.nn.BatchNorm1d(np.prod(state_shape))
-        self.bn1 = torch.nn.BatchNorm1d(hidden_dim)
-        self.bn2 = torch.nn.BatchNorm1d(hidden_dim)
-        self.bn3 = torch.nn.BatchNorm1d(np.prod(action_shape))
-
-        self.relu1 = torch.nn.ReLU()
-        self.relu2 = torch.nn.ReLU()
-        self.tanh = torch.nn.Tanh()
-
-    def forward(self, x) -> torch.Tensor:
-        x = self.bn0(torch.reshape(x, (-1, np.prod(self.state_shape))))
-        x = self.relu1(self.bn1(self.fc1(x)))
-        x = self.relu2(self.bn2(self.fc2(x)))
-        x = self.tanh(self.bn3(self.fc3(x)))
-        x = torch.reshape(x, (-1,)+self.action_shape)
-        return x * self.action_bound
-
-
+    def forward(self, x):
+        pass
