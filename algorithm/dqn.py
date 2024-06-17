@@ -8,7 +8,7 @@ from .util import OffPolicyRLModel, QValueNetwork
 
 class DQN(OffPolicyRLModel):
     
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, epsilon=0.1, lr=1e-3, gamma=0.99, device='cpu', capacity=10000, **kwargs) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, epsilon=0.1, lr=1e-3, gamma=0.99, device='cpu', capacity=10000, **kwargs) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, capacity)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
             raise TypeError('state_dim_or_shape must be int, tuple or list')
@@ -18,14 +18,13 @@ class DQN(OffPolicyRLModel):
         self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
         self.action_dim = action_dim_or_shape[0] if not isinstance(action_dim_or_shape, int) else action_dim_or_shape
         self.batch_size = batch_size
-        self.hidden_dim = hidden_dim
         self.epsilon = epsilon
         self.lr = lr
         self.gamma = gamma
         self.device = device
         self.kwargs = kwargs
 
-        self.q_net = QValueNetwork(self.state_shape, self.action_dim, hidden_dim)
+        self.q_net = QValueNetwork(self.state_shape, self.action_dim, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
         self.target_q_net = copy.deepcopy(self.q_net)
 
         self.q_net.to(device)

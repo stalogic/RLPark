@@ -9,7 +9,7 @@ from .util import OnPolicyRLModel, PolicyNetwork, ContinuousPolicyNetwork, Value
 
 class PPO(OnPolicyRLModel):
     
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, lamda=0.95, eps=0.2, epochs=10, device='cpu', **kwargs) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, lr=1e-3, gamma=0.99, lamda=0.95, eps=0.2, epochs=10, device='cpu', **kwargs) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, **kwargs)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
             raise TypeError(f"state_dim_or_shape must be int, tuple or list")
@@ -19,7 +19,6 @@ class PPO(OnPolicyRLModel):
         self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
         self.action_dim = action_dim_or_shape[0] if not isinstance(action_dim_or_shape, int) else action_dim_or_shape
         self.batch_size = batch_size
-        self.hidden_dim = hidden_dim
         self.lr = lr
         self.gamma = gamma
         self.lamda = lamda
@@ -28,8 +27,8 @@ class PPO(OnPolicyRLModel):
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = PolicyNetwork(self.state_shape, self.action_dim, hidden_dim)
-        self.value_net = ValueNetwork(self.state_shape, hidden_dim)
+        self.policy_net = PolicyNetwork(self.state_shape, self.action_dim, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
+        self.value_net = ValueNetwork(self.state_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
 
         self.policy_net.to(device)
         self.value_net.to(device)
@@ -184,7 +183,7 @@ class PPO(OnPolicyRLModel):
 
 class PPOContinuous(OnPolicyRLModel):
     
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, lamda=0.95, eps=0.2, epochs=10, device='cpu', **kwargs) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, lr=1e-3, gamma=0.99, lamda=0.95, eps=0.2, epochs=10, device='cpu', **kwargs) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, **kwargs)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
             raise TypeError(f"state_dim_or_shape must be int, tuple or list")
@@ -194,7 +193,6 @@ class PPOContinuous(OnPolicyRLModel):
         self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
         self.action_shape = (action_dim_or_shape,) if isinstance(action_dim_or_shape, int) else tuple(action_dim_or_shape)
         self.batch_size = batch_size
-        self.hidden_dim = hidden_dim
         self.lr = lr
         self.gamma = gamma
         self.lamda = lamda
@@ -203,8 +201,8 @@ class PPOContinuous(OnPolicyRLModel):
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = ContinuousPolicyNetwork(self.state_shape, self.action_shape, hidden_dim)
-        self.value_net = ValueNetwork(self.state_shape, hidden_dim)
+        self.policy_net = ContinuousPolicyNetwork(self.state_shape, self.action_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
+        self.value_net = ValueNetwork(self.state_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
 
         self.policy_net.to(device)
         self.value_net.to(device)

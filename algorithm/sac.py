@@ -10,7 +10,7 @@ from .util import OffPolicyRLModel, ContinuousPolicyNetwork, ContinuousQValueNet
 
 class SAC(OffPolicyRLModel):
 
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, tau=0.005, target_entropy=1.0, device='cpu', **kwargs) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, lr=1e-3, gamma=0.99, tau=0.005, target_entropy=1.0, device='cpu', **kwargs) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, **kwargs)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
             raise TypeError(f"state_dim_or_shape must be int, tuple or list")
@@ -20,7 +20,6 @@ class SAC(OffPolicyRLModel):
         self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
         self.action_dim = action_dim_or_shape[0] if not isinstance(action_dim_or_shape, int) else action_dim_or_shape
         self.batch_size = batch_size
-        self.hidden_dim = hidden_dim
         self.lr = lr
         self.gamma = gamma
         self.tau = tau
@@ -28,9 +27,9 @@ class SAC(OffPolicyRLModel):
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = PolicyNetwork(self.state_shape, self.action_dim, hidden_dim).to(device)
-        self.q1_net = QValueNetwork(self.state_shape, self.action_dim, hidden_dim).to(device)
-        self.q2_net = QValueNetwork(self.state_shape, self.action_dim, hidden_dim).to(device)
+        self.policy_net = PolicyNetwork(self.state_shape, self.action_dim, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs).to(device)
+        self.q1_net = QValueNetwork(self.state_shape, self.action_dim, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs).to(device)
+        self.q2_net = QValueNetwork(self.state_shape, self.action_dim, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs).to(device)
         self.target_q1_net = copy.deepcopy(self.q1_net).to(device)
         self.target_q2_net = copy.deepcopy(self.q2_net).to(device)
         self.target_q1_net.eval()
@@ -180,10 +179,9 @@ class SAC(OffPolicyRLModel):
         except: pass
 
 
-
 class SACContinuous(OffPolicyRLModel):
 
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, action_bound=1.0, batch_size=128, lr=1e-3, gamma=0.99, tau=0.005, target_entropy=1.0, device='cpu', **kwargs):
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), action_bound=1.0, batch_size=128, lr=1e-3, gamma=0.99, tau=0.005, target_entropy=1.0, device='cpu', **kwargs):
         super().__init__(state_dim_or_shape, action_dim_or_shape, **kwargs)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
             raise TypeError(f"state_dim_or_shape must be int, tuple or list")
@@ -193,7 +191,6 @@ class SACContinuous(OffPolicyRLModel):
         self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
         self.action_shape = (action_dim_or_shape,) if isinstance(action_dim_or_shape, int) else tuple(action_dim_or_shape)
         self.batch_size = batch_size
-        self.hidden_dim = hidden_dim
         self.action_bound = torch.tensor(action_bound, dtype=torch.float32, device=device)
         self.lr = lr
         self.gamma = gamma
@@ -202,9 +199,9 @@ class SACContinuous(OffPolicyRLModel):
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = ContinuousPolicyNetwork(self.state_shape, self.action_shape, hidden_dim).to(self.device)
-        self.q1_net = ContinuousQValueNetwork(self.state_shape, self.action_shape, hidden_dim).to(self.device)
-        self.q2_net = ContinuousQValueNetwork(self.state_shape, self.action_shape, hidden_dim).to(self.device)
+        self.policy_net = ContinuousPolicyNetwork(self.state_shape, self.action_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs).to(self.device)
+        self.q1_net = ContinuousQValueNetwork(self.state_shape, self.action_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs).to(self.device)
+        self.q2_net = ContinuousQValueNetwork(self.state_shape, self.action_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs).to(self.device)
         self.target_q1_net = copy.deepcopy(self.q1_net).to(self.device).eval()
         self.target_q2_net = copy.deepcopy(self.q2_net).to(self.device).eval()
         self.log_alpha = torch.tensor(np.log(0.01), dtype=torch.float32, requires_grad=True, device=self.device)

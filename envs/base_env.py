@@ -7,6 +7,7 @@ class BaseEnv(object):
     def __init__(self, env_name, **kwargs) -> None:
         self.env_name = env_name
         self.env = gym.make(env_name, **kwargs)
+        self._state_transpose = False
 
         self.total_reward = 0.0
         self.total_raw_reward = 0.0
@@ -27,6 +28,10 @@ class BaseEnv(object):
         if len(self.env.observation_space.shape) == 1:
             return self.env.observation_space.shape[0]
         else:
+            if len(self.env.observation_space.shape) == 3:
+                self._state_transpose = True
+                shape = self.env.observation_space.shape
+                return shape[-1:] + shape[:-1]
             return self.env.observation_space.shape
     
     @property
@@ -50,6 +55,8 @@ class BaseEnv(object):
 
     def reset(self) -> np.ndarray:
         obs, _ = self.env.reset()
+        if self._state_transpose:
+            obs = np.transpose(obs, (2, 0, 1))
         self.total_reward = 0.0
         self.total_raw_reward = 0.0
         self.total_steps = 0
@@ -63,6 +70,8 @@ class BaseEnv(object):
     
     def step(self, action):
         obs, raw_reward, done, terminal, _ = self.env.step(action)
+        if self._state_transpose:
+            obs = np.transpose(obs, (2, 0, 1))
         if hasattr(self, 'state_fn'):
             obs = self.state_fn(obs, raw_reward, done, terminal)
         if hasattr(self, 'reward_fn'):

@@ -6,7 +6,7 @@ from .util import OffPolicyRLModel, DeterministicPolicyNetwork, ContinuousQValue
 
 class DDPG(OffPolicyRLModel):
     
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, action_bound=1, lr=1e-3, gamma=0.99, capacity=10000, device="cpu", **kwargs) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, action_bound=1, lr=1e-3, gamma=0.99, capacity=10000, device="cpu", **kwargs) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, capacity)
 
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
@@ -17,15 +17,14 @@ class DDPG(OffPolicyRLModel):
         self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
         self.action_shape = (action_dim_or_shape,) if isinstance(action_dim_or_shape, int) else tuple(action_dim_or_shape)
         self.action_bound = action_bound
-        self.hidden_dim = hidden_dim
         self.batch_size = batch_size
         self.lr = lr
         self.gamma = gamma
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = DeterministicPolicyNetwork(self.state_shape, self.action_shape, action_bound, hidden_dim)
-        self.qvalue_net = ContinuousQValueNetwork(self.state_shape, self.action_shape, hidden_dim)
+        self.policy_net = DeterministicPolicyNetwork(self.state_shape, self.action_shape, action_bound, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
+        self.qvalue_net = ContinuousQValueNetwork(self.state_shape, self.action_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
         self.target_policy_net = copy.deepcopy(self.policy_net)
         self.target_qvalue_net = copy.deepcopy(self.qvalue_net)
 

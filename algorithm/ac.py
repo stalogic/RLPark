@@ -7,7 +7,7 @@ from .util import OffPolicyRLModel, OnPolicyRLModel, PolicyNetwork, ValueNetwork
 
 class OffPolicyActorCritic(OffPolicyRLModel):
     
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
         super().__init__(state_dim_or_shape, **kwargs)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
             raise TypeError(f"state_dim_or_shape must be int, tuple or list")
@@ -16,14 +16,13 @@ class OffPolicyActorCritic(OffPolicyRLModel):
         self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
         self.action_dim = action_dim_or_shape[0] if not isinstance(action_dim_or_shape, int) else action_dim_or_shape
         self.batch_size = batch_size
-        self.hidden_dim = hidden_dim
         self.lr = lr
         self.gamma = gamma
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = PolicyNetwork(self.state_shape, self.action_dim, hidden_dim)
-        self.value_net = ValueNetwork(self.state_shape, hidden_dim)
+        self.policy_net = PolicyNetwork(self.state_shape, self.action_dim, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
+        self.value_net = ValueNetwork(self.state_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
         self.target_policy_net = copy.deepcopy(self.policy_net)
         self.target_value_net = copy.deepcopy(self.value_net)
 
@@ -187,7 +186,7 @@ class OffPolicyActorCritic(OffPolicyRLModel):
 
 class OffPolicyActorCriticContinuous(OffPolicyRLModel):
     
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, **kwargs)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
             raise TypeError(f"state_dim_or_shape must be int, tuple or list")
@@ -196,14 +195,13 @@ class OffPolicyActorCriticContinuous(OffPolicyRLModel):
         self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
         self.action_shape = (action_dim_or_shape,) if isinstance(action_dim_or_shape, int) else tuple(action_dim_or_shape)
         self.batch_size = batch_size
-        self.hidden_dim = hidden_dim
         self.lr = lr
         self.gamma = gamma
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = ContinuousPolicyNetwork(self.state_shape, self.action_shape, hidden_dim)
-        self.value_net = ValueNetwork(self.state_shape, hidden_dim)
+        self.policy_net = ContinuousPolicyNetwork(self.state_shape, self.action_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
+        self.value_net = ValueNetwork(self.state_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
         self.target_policy_net = copy.deepcopy(self.policy_net)
         self.target_value_net = copy.deepcopy(self.value_net)
 
@@ -327,7 +325,7 @@ class OffPolicyActorCriticContinuous(OffPolicyRLModel):
 
 class ActorCritic(OnPolicyRLModel):
     
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, **kwargs)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
             raise TypeError(f"state_dim_or_shape must be int, tuple or list")
@@ -336,14 +334,13 @@ class ActorCritic(OnPolicyRLModel):
         self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
         self.action_dim = action_dim_or_shape[0] if not isinstance(action_dim_or_shape, int) else action_dim_or_shape
         self.batch_size = batch_size
-        self.hidden_dim = hidden_dim
         self.lr = lr
         self.gamma = gamma
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = PolicyNetwork(self.state_shape, self.action_dim, hidden_dim)
-        self.value_net = ValueNetwork(self.state_shape, hidden_dim)
+        self.policy_net = PolicyNetwork(self.state_shape, self.action_dim, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
+        self.value_net = ValueNetwork(self.state_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
 
         self.policy_net.to(device)
         self.value_net.to(device)
@@ -491,7 +488,7 @@ class ActorCritic(OnPolicyRLModel):
 
 class ActorCriticContinuous(OnPolicyRLModel):
     
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dim=32, batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, lr=1e-3, gamma=0.99, device='cpu', **kwargs) -> None:
         super().__init__(state_dim_or_shape, **kwargs)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
             raise TypeError(f"state_dim_or_shape must be int, tuple or list")
@@ -500,14 +497,13 @@ class ActorCriticContinuous(OnPolicyRLModel):
         self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
         self.action_shape = (action_dim_or_shape,) if isinstance(action_dim_or_shape, int) else tuple(action_dim_or_shape)
         self.batch_size = batch_size
-        self.hidden_dim = hidden_dim
         self.lr = lr
         self.gamma = gamma
         self.device = device
         self.kwargs = kwargs
 
-        self.policy_net = ContinuousPolicyNetwork(self.state_shape, self.action_shape, hidden_dim)
-        self.value_net = ValueNetwork(self.state_shape, hidden_dim)
+        self.policy_net = ContinuousPolicyNetwork(self.state_shape, self.action_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
+        self.value_net = ValueNetwork(self.state_shape, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
 
         self.policy_net.to(device)
         self.value_net.to(device)
