@@ -52,6 +52,7 @@ def generate_code(algo_name, env_name, **kwargs):
     num_episodes = kwargs.get('num_episodes', 500)
     action_bound = kwargs.get('action_bound', None)
     device = kwargs.get('device', None)
+    input_norm = kwargs.get('input_norm', None)
 
     import_code = f"""\
 import os
@@ -85,14 +86,15 @@ print(env)
                              hidden_dims=hidden_dims,
                              conv_layers=conv_layers,
                              action_bound=action_bound,
+                             input_norm=input_norm,
                              device=device)
 
     train_code = generate_fn("train_and_evaluate", env="env", agent="agent", num_episodes=num_episodes,)
 
     return "\n\n".join([import_code, wandb_init, agent_init, train_code])
 
-def generate_python_script(algo_name: str, env_name: str):
-    code = generate_code(algo_name, env_name)
+def generate_python_script(algo_name: str, env_name: str, **kwargs):
+    code = generate_code(algo_name, env_name, **kwargs)
     path = pathlib.Path(f"./experiments/{env_name}".lower())
     path.mkdir(parents=True, exist_ok=True)
     path = path / f"{algo_name}_{env_name}.py".lower()
