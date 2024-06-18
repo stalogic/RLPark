@@ -63,8 +63,11 @@ from algorithm.util import train_and_evaluate
 from envs import {env_name} as make_env
 
 env = make_env()
-val_env = make_env(render_mode="human")
 print(env)
+try:
+    val_env = make_env(render_mode="human")
+except:
+    val_env = None
 """
 
     wandb_init = generate_fn("wandb.init", project=f"{env_name}", config={
@@ -88,9 +91,12 @@ def generate_python_script(algo_name: str, env_name: str, **kwargs):
     path.mkdir(parents=True, exist_ok=True)
     path = path / f"{algo_name}_{env_name}.py".lower()
     path.write_text(code)
-    # black_result = subprocess.run(["black", str(path)], capture_output=True)
-    # if black_result.returncode != 0:
-    #     print(black_result.stderr.decode("utf-8"))
+    try:
+        black_result = subprocess.run(["black", str(path)], capture_output=True)
+        if black_result.returncode != 0:
+            print(black_result.stderr.decode("utf-8"))
+    except:
+        pass
     return str(path)
 
 if __name__ == '__main__':
