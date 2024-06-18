@@ -13,7 +13,7 @@ def compute_advantage(gamma, lamda, td_delta):
     advantage_list.reverse()
     return torch.tensor(np.array(advantage_list), dtype=torch.float)
 
-def train_and_evaluate(env, agent, num_episodes=1000, **kwargs):
+def train_and_evaluate(env, agent, num_episodes=1000, val_env=None, **kwargs):
     """
     训练和评估一个智能体在一个给定环境中的表现。
     
@@ -31,11 +31,11 @@ def train_and_evaluate(env, agent, num_episodes=1000, **kwargs):
     """
     
     if hasattr(agent, "replay_buffer"):
-        train_and_evaluate_offpolicy_agent(env, agent, num_episodes, **kwargs)
+        train_and_evaluate_offpolicy_agent(env, agent, num_episodes, val_env, **kwargs)
     else:
-        train_and_evaluate_onpolicy_agent(env, agent, num_episodes, **kwargs)
+        train_and_evaluate_onpolicy_agent(env, agent, num_episodes, val_env, **kwargs)
 
-def train_and_evaluate_offpolicy_agent(env, agent, num_episodes=1000, **kwargs):
+def train_and_evaluate_offpolicy_agent(env, agent, num_episodes=1000, val_env=None, **kwargs):
     
     # 初始化用于记录指标的字典
     metrics = {
@@ -72,16 +72,21 @@ def train_and_evaluate_offpolicy_agent(env, agent, num_episodes=1000, **kwargs):
             # 达到评估周期时进行性能评估
             if (i_episode + 1) % kwargs.get("num_eval_frequence", 100) == 0:
                 # 执行多轮评估episode
-                for _ in tqdm.tqdm(range(kwargs.get("num_eval_episodes", 100)), desc="Evaluating", leave=False):
+                for i_val in tqdm.tqdm(range(kwargs.get("num_eval_episodes", 100)), desc="Evaluating", leave=False):
                     episode_return, episode_step = 0.0, 0
-                    state, _ = env.reset()
+
+                    if i_val % kwargs.get("render_period", 1) == 0:
+                        env_ = val_env if val_env else env
+                    else:
+                        env_ = env
+                    state, _ = env_.reset()
                     while True:
                         # 使用预测模式选择动作
-                        if hasattr(env, "action_mask"):
-                            action = agent.predict_action_with_mask(state, env.action_mask)
+                        if hasattr(env_, "action_mask"):
+                            action = agent.predict_action_with_mask(state, env_.action_mask)
                         else:
                             action = agent.predict_action(state)
-                        next_state, reward, done, terminal, _ = env.step(action)
+                        next_state, reward, done, terminal, _ = env_.step(action)
                         state = next_state
                         
                         # 累加评估指标
@@ -115,7 +120,7 @@ def train_and_evaluate_offpolicy_agent(env, agent, num_episodes=1000, **kwargs):
                 except: pass  # 忽略wandb未安装或配置不当的情况
 
 
-def train_and_evaluate_onpolicy_agent(env, agent, num_episodes=1000, **kwargs):
+def train_and_evaluate_onpolicy_agent(env, agent, num_episodes=1000, val_env=None, **kwargs):
 
     # 初始化用于记录指标的字典
     metrics = {
@@ -157,16 +162,21 @@ def train_and_evaluate_onpolicy_agent(env, agent, num_episodes=1000, **kwargs):
             # 达到评估周期时进行性能评估
             if (i_episode + 1) % kwargs.get("num_eval_frequence", 100) == 0:
                 # 执行多轮评估episode
-                for _ in tqdm.tqdm(range(kwargs.get("num_eval_episodes", 100)), desc="Evaluating", leave=False):
+                for i_val in tqdm.tqdm(range(kwargs.get("num_eval_episodes", 100)), desc="Evaluating", leave=False):
                     episode_return, episode_step = 0.0, 0
-                    state, _ = env.reset()
+
+                    if i_val % kwargs.get("render_period", 1) == 0:
+                        env_ = val_env if val_env else env
+                    else:
+                        env_ = env
+                    state, _ = env_.reset()
                     while True:
                         # 使用预测模式选择动作
-                        if hasattr(env, "action_mask"):
-                            action = agent.predict_action_with_mask(state, env.action_mask)
+                        if hasattr(env_, "action_mask"):
+                            action = agent.predict_action_with_mask(state, env_.action_mask)
                         else:
                             action = agent.predict_action(state)
-                        next_state, reward, done, terminal, _ = env.step(action)
+                        next_state, reward, done, terminal, _ = env_.step(action)
                         state = next_state
                         
                         # 累加评估指标

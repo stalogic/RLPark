@@ -2,29 +2,29 @@ import numpy as np
 from .base_env import BaseEnv
 
 
-def acrobot_v1() -> BaseEnv:
-    return BaseEnv('Acrobot-v1')
+def acrobot_v1(**kwargs) -> BaseEnv:
+    return BaseEnv('Acrobot-v1', **kwargs)
 
-def cart_pole_v0() -> BaseEnv:
-    return BaseEnv('CartPole-v0')
+def cart_pole_v0(**kwargs) -> BaseEnv:
+    return BaseEnv('CartPole-v0', **kwargs)
 
-def cart_pole_v1() -> BaseEnv:
-    return BaseEnv('CartPole-v1')
+def cart_pole_v1(**kwargs) -> BaseEnv:
+    return BaseEnv('CartPole-v1', **kwargs)
 
-def pendulum_v1() -> BaseEnv:
-    return BaseEnv('Pendulum-v1')
+def pendulum_v1(**kwargs) -> BaseEnv:
+    return BaseEnv('Pendulum-v1', **kwargs)
 
-def pendulum_v2() -> BaseEnv:
+def pendulum_v2(**kwargs) -> BaseEnv:
     class PendulumEnv(BaseEnv):
         def reward_fn(self, obs=None, reward=None, done=None, terminal=None):
             """将奖励修改为1 + reward / 8"""
             return (reward + 8) / 8
-    return PendulumEnv('Pendulum-v1')
+    return PendulumEnv('Pendulum-v1', **kwargs)
 
-def mountain_car_v0() -> BaseEnv:
-    return BaseEnv('MountainCar-v0')
+def mountain_car_v0(**kwargs) -> BaseEnv:
+    return BaseEnv('MountainCar-v0', **kwargs)
 
-def mountain_car_v1() -> BaseEnv:
+def mountain_car_v1(**kwargs) -> BaseEnv:
     class MountainCarEnvV1(BaseEnv):
         def reward_fn(self, obs=None, reward=None, done=None, terminal=None):
             """完成奖励设置为10, 其他奖励设置为`abs(x+0.5) + 10 * abs(v)`, x为位置, v为速度"""
@@ -32,9 +32,9 @@ def mountain_car_v1() -> BaseEnv:
                 return 10
             else:
                 return abs(obs[0] + 0.5) + 10 * abs(obs[1])
-    return MountainCarEnvV1('MountainCar-v0')
+    return MountainCarEnvV1('MountainCar-v0', **kwargs)
 
-def mountain_car_v2() -> BaseEnv:
+def mountain_car_v2(**kwargs) -> BaseEnv:
     class MountainCarEnvV2(BaseEnv):
         def state_fn(self, obs=None, reward=None, done=None, terminal=None):
             """状态由(position, velocity)修改为(position, velocity, running_steps)"""
@@ -49,9 +49,9 @@ def mountain_car_v2() -> BaseEnv:
                 return 10
             else:
                 return abs(obs[0] + 0.5) + 10 * abs(obs[1])
-    return MountainCarEnvV2('MountainCar-v0')
+    return MountainCarEnvV2('MountainCar-v0', **kwargs)
 
-def mountain_car_v3() -> BaseEnv:
+def mountain_car_v3(**kwargs) -> BaseEnv:
     class MountainCarEnvV3(BaseEnv):
         def state_fn(self, obs=None, reward=None, done=None, terminal=None):
             """状态由(position, velocity)修改为(position, velocity, running_steps)"""
@@ -67,12 +67,12 @@ def mountain_car_v3() -> BaseEnv:
                 return 10 + s * np.log1p(s)
             else:
                 return abs(obs[0] + 0.5) + 10 * abs(obs[1]) - 0.1 * np.log1p(self.total_steps)
-    return MountainCarEnvV3('MountainCar-v0')
+    return MountainCarEnvV3('MountainCar-v0', **kwargs)
 
-def mountain_car_continuous_v0() -> BaseEnv:
-    return BaseEnv('MountainCarContinuous-v0')
+def mountain_car_continuous_v0(**kwargs) -> BaseEnv:
+    return BaseEnv('MountainCarContinuous-v0', **kwargs)
 
-def mountain_car_continuous_v1() -> BaseEnv:
+def mountain_car_continuous_v1(**kwargs) -> BaseEnv:
     class MountainCarContinuousEnvV1(BaseEnv):
         def reward_fn(self, obs=None, reward=None, done=None, terminal=None):
             """done=False时奖励设置为`reward + abs(x+0.5) + 10 * abs(v)`, x为位置, v为速度"""
@@ -80,9 +80,9 @@ def mountain_car_continuous_v1() -> BaseEnv:
                 return reward
             else:
                 return reward + abs(obs[0] + 0.5) + 10 * abs(obs[1])
-    return MountainCarContinuousEnvV1('MountainCarContinuous-v0')
+    return MountainCarContinuousEnvV1('MountainCarContinuous-v0', **kwargs)
 
-def mountain_car_continuous_v2() -> BaseEnv:
+def mountain_car_continuous_v2(**kwargs) -> BaseEnv:
     class MountainCarContinuousEnvV2(BaseEnv):
         def state_fn(self, obs=None, reward=None, done=None, terminal=None):
             """状态由(position, velocity)修改为(position, velocity, running_steps)"""
@@ -97,9 +97,9 @@ def mountain_car_continuous_v2() -> BaseEnv:
                 return reward
             else:
                 return reward + abs(obs[0] + 0.5) + 10 * abs(obs[1])
-    return MountainCarContinuousEnvV2('MountainCarContinuous-v0')
+    return MountainCarContinuousEnvV2('MountainCarContinuous-v0', **kwargs)
 
-def mountain_car_continuous_v3() -> BaseEnv:
+def mountain_car_continuous_v3(**kwargs) -> BaseEnv:
     class MountainCarContinuousEnvV3(BaseEnv):
         def state_fn(self, obs=None, reward=None, done=None, terminal=None):
             """状态由(position, velocity)修改为(position, velocity, running_steps)"""
@@ -115,7 +115,7 @@ def mountain_car_continuous_v3() -> BaseEnv:
                 return reward + s * np.log1p(s)
             else:
                 return reward + abs(obs[0] + 0.5) + 10 * abs(obs[1]) - 0.1 * np.log1p(self.total_steps)
-    return MountainCarContinuousEnvV3('MountainCarContinuous-v0')
+    return MountainCarContinuousEnvV3('MountainCarContinuous-v0', **kwargs)
 
 
 

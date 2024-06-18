@@ -63,6 +63,7 @@ from algorithm.util import train_and_evaluate
 from envs import {env_name} as make_env
 
 env = make_env()
+val_env = make_env(render_mode="human")
 print(env)
 """
 
@@ -77,7 +78,7 @@ print(env)
                             **kwargs
                              )
 
-    train_code = generate_fn("train_and_evaluate", env=CodeValue("env"), agent=CodeValue("agent"), **kwargs)
+    train_code = generate_fn("train_and_evaluate", env=CodeValue("env"), agent=CodeValue("agent"), val_env=CodeValue("val_env"), **kwargs)
 
     return "\n\n".join([import_code, wandb_init, agent_init, train_code])
 
@@ -87,9 +88,9 @@ def generate_python_script(algo_name: str, env_name: str, **kwargs):
     path.mkdir(parents=True, exist_ok=True)
     path = path / f"{algo_name}_{env_name}.py".lower()
     path.write_text(code)
-    black_result = subprocess.run(["black", str(path)], capture_output=True)
-    if black_result.returncode != 0:
-        print(black_result.stderr.decode("utf-8"))
+    # black_result = subprocess.run(["black", str(path)], capture_output=True)
+    # if black_result.returncode != 0:
+    #     print(black_result.stderr.decode("utf-8"))
     return str(path)
 
 if __name__ == '__main__':

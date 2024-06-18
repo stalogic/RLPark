@@ -1,12 +1,10 @@
 from .base_env import Base2DEnv
 
-def pong_v0() -> Base2DEnv:
-    env = Base2DEnv("ALE/Pong-v5", full_action_space=False)
-    return env
+def pong_v0(full_action_space=False, **kwargs) -> Base2DEnv:
+    return Base2DEnv("ALE/Pong-v5", full_action_space=full_action_space, **kwargs)
 
-def breakout_v0() -> Base2DEnv:
-    env = Base2DEnv("ALE/Breakout-v5", full_action_space=False)
-    return env
+def breakout_v0(full_action_space=False, **kwargs) -> Base2DEnv:
+    return Base2DEnv("ALE/Breakout-v5", full_action_space=full_action_space, **kwargs)
 
 
 if __name__ == '__main__':
