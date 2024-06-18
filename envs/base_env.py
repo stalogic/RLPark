@@ -114,12 +114,30 @@ class Base2DEnv(BaseEnv):
         return (channels, self.width, self.height)
     
     def state_fn(self, obs, raw_reward=None, done=None, terminal=None) -> np.ndarray:
+        """
+        根据配置处理观测值，转换为模型所需的 state 格式。
+        
+        参数:
+        obs: 输入的原始观测值，通常是图像数据。
+        raw_reward: (可选) 原始奖励值，本函数中未使用。
+        done: (可选) 表示 episode 是否结束的布尔值，本函数中未使用。
+        terminal: (可选) 表示是否到达终端状态的布尔值，本函数中未使用。
+        
+        返回:
+        处理后的观测值，格式为 numpy 数组。
+        """
+        # 如果配置为灰度图像，则将彩色图像转换为灰度图像，并调整大小
         if self.grayscale:
+            # 转换为灰度图像
             obs = cv2.cvtColor(obs, cv2.COLOR_RGB2GRAY)
+            # 调整图像大小，使用 INTER_AREA 插值方法以保持图像质量
             obs = cv2.resize(obs, (self.width, self.height), interpolation=cv2.INTER_AREA)
+            # 添加颜色通道维度，因为后续处理需要多通道图像
             obs = np.expand_dims(obs, axis=0)
         else:
+            # 调整图像大小，使用 INTER_AREA 插值方法以保持图像质量
             obs = cv2.resize(obs, (self.width, self.height), interpolation=cv2.INTER_AREA)
+            # 调整图像通道顺序，从 HWC 调整为 CHW，以符合模型输入要求
             obs = np.transpose(obs, (2, 0, 1))
         return obs
     
