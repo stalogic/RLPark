@@ -5,7 +5,7 @@ import numpy as np
 class MLPNetwork(torch.nn.Module):
     
     def __init__(self, input_dim:int, output_dim:int, hidden_dims:tuple, activation=torch.nn.ReLU(), batch_norm:bool=True, dropout:float=None, input_norm:bool=False, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         if dropout and not (0.0 < dropout < 1.0):
             raise ValueError("dropout must be between 0 and 1")
@@ -36,7 +36,7 @@ class MLPNetwork(torch.nn.Module):
 class CNNNetwork(torch.nn.Module):
 
     def __init__(self, input_shape:tuple, output_dim:int, conv_layers:tuple, activation=torch.nn.ReLU(), batch_norm:bool=True, dropout:float=None, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         if dropout and not (0.0 < dropout < 1.0):
             raise ValueError("dropout must be between 0 and 1")
