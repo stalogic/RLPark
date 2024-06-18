@@ -1,13 +1,13 @@
 import numpy as np
 import gym
 import wandb
+import cv2
 
 class BaseEnv(object):
 
     def __init__(self, env_name, **kwargs) -> None:
         self.env_name = env_name
         self.env = gym.make(env_name, **kwargs)
-        self._state_transpose = False
 
         self.total_reward = 0.0
         self.total_raw_reward = 0.0
@@ -28,10 +28,6 @@ class BaseEnv(object):
         if len(self.env.observation_space.shape) == 1:
             return self.env.observation_space.shape[0]
         else:
-            if len(self.env.observation_space.shape) == 3:
-                self._state_transpose = True
-                shape = self.env.observation_space.shape
-                return shape[-1:] + shape[:-1]
             return self.env.observation_space.shape
     
     @property
@@ -54,9 +50,7 @@ class BaseEnv(object):
         return self.env.action_space.sample()
 
     def reset(self) -> np.ndarray:
-        obs, _ = self.env.reset()
-        if self._state_transpose:
-            obs = np.transpose(obs, (2, 0, 1))
+        obs, info = self.env.reset()
         self.total_reward = 0.0
         self.total_raw_reward = 0.0
         self.total_steps = 0
@@ -66,12 +60,10 @@ class BaseEnv(object):
         if hasattr(self, 'state_fn'):
             obs = self.state_fn(obs)
         
-        return obs, _
+        return obs, info
     
     def step(self, action):
         obs, raw_reward, done, terminal, _ = self.env.step(action)
-        if self._state_transpose:
-            obs = np.transpose(obs, (2, 0, 1))
         if hasattr(self, 'state_fn'):
             obs = self.state_fn(obs, raw_reward, done, terminal)
         if hasattr(self, 'reward_fn'):
@@ -109,11 +101,36 @@ class BaseEnv(object):
         return obs, reward, done, terminal, _
 
 
+class Base2DEnv(BaseEnv):
+    def __init__(self, env_name:str, width:int=84, height:int=84, grayscale:bool=True, **kwargs) -> None:
+        super().__init__(env_name, **kwargs)
+        self.width = width
+        self.height = height
+        self.grayscale = grayscale
+
+    @property
+    def state_dim_or_shape(self) -> tuple:
+        channels = 1 if self.grayscale else 3
+        return (channels, self.width, self.height)
+    
+    def state_fn(self, obs, raw_reward=None, done=None, terminal=None) -> np.ndarray:
+        if self.grayscale:
+            obs = cv2.cvtColor(obs, cv2.COLOR_RGB2GRAY)
+            obs = cv2.resize(obs, (self.width, self.height), interpolation=cv2.INTER_AREA)
+            obs = np.expand_dims(obs, axis=0)
+        else:
+            obs = cv2.resize(obs, (self.width, self.height), interpolation=cv2.INTER_AREA)
+            obs = np.transpose(obs, (2, 0, 1))
+        return obs
+    
+
+
 if __name__ == '__main__':
 
     # env = BaseEnv('CartPole-v0')
-    env = BaseEnv('Pendulum-v1')
+    # env = BaseEnv('Pendulum-v1')
     # env = BaseEnv("ALE/Asteroids-v5")
+    env = Base2DEnv("ALE/Breakout-v5", grayscale=False)
     print(env)
     for _ in range(3):
         state, _ = env.reset()

@@ -1,7 +1,12 @@
-from .base_env import BaseEnv
+from .base_env import Base2DEnv
 
-def pong_v0() -> BaseEnv:
-    return BaseEnv("ALE/Pong-v5", full_action_space=False)
+def pong_v0() -> Base2DEnv:
+    env = Base2DEnv("ALE/Pong-v5", full_action_space=False)
+    return env
+
+def breakout_v0() -> Base2DEnv:
+    env = Base2DEnv("ALE/Breakout-v5", full_action_space=False)
+    return env
 
 
 if __name__ == '__main__':
