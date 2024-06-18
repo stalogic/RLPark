@@ -1,6 +1,7 @@
 import os
 import pathlib
 import typer
+import subprocess
 
 
 class CodeValue(object):
@@ -24,7 +25,7 @@ def generate_dict(**kwargs):
         else:
             lines.append(f"'{key}': {value},")
     lines.append("}")
-    return "\n".join(lines)
+    return " ".join(lines)
 
 def generate_fn(fn_name:str, *args, **kwargs):
     lines = []
@@ -37,22 +38,18 @@ def generate_fn(fn_name:str, *args, **kwargs):
     for key, value in kwargs.items():
         if value is None:
             continue
+        elif isinstance(value, str):
+            lines.append(f"{key}='{value}',")
         elif isinstance(value, dict):
             lines.append(f"{key}={generate_dict(**value)},")
         else:
             lines.append(f"{key}={value},")
     lines.append(f")")
-    return "\n".join(lines)
+    return " ".join(lines)
     
 
 def generate_code(algo_name, env_name, **kwargs):
-    hidden_dims = kwargs.get('hidden_dims', None)
-    conv_layers = kwargs.get('conv_layers', None)
-    batch_size = kwargs.get('batch_size', 128)
     num_episodes = kwargs.get('num_episodes', 500)
-    action_bound = kwargs.get('action_bound', None)
-    device = kwargs.get('device', None)
-    input_norm = kwargs.get('input_norm', None)
 
     import_code = f"""\
 import os
@@ -69,27 +66,18 @@ env = make_env()
 print(env)
 """
 
-    wandb_init = generate_fn("wandb.init", project=f"'{env_name}'", config={
+    wandb_init = generate_fn("wandb.init", project=f"{env_name}", config={
         "state_dim": CodeValue("env.state_dim_or_shape"),
         "action_dim": CodeValue("env.action_dim_or_shape"),
-        "hidden_dims": hidden_dims,
-        "conv_layers": conv_layers,
-        "batch_size": batch_size,
-        "num_episodes": num_episodes,
-        "action_bound": action_bound,
-        "device": device,
-        "algorithm": algo_name
+        "algorithm": algo_name,
+        **kwargs
     })
     
     agent_init = generate_fn(f"agent={algo_name}", CodeValue("env.state_dim_or_shape"), CodeValue("env.action_dim_or_shape"), 
-                             batch_size=batch_size,
-                             hidden_dims=hidden_dims,
-                             conv_layers=conv_layers,
-                             action_bound=action_bound,
-                             input_norm=input_norm,
-                             device=device)
+                            **kwargs
+                             )
 
-    train_code = generate_fn("train_and_evaluate", env="env", agent="agent", num_episodes=num_episodes,)
+    train_code = generate_fn("train_and_evaluate", env=CodeValue("env"), agent=CodeValue("agent"), **kwargs)
 
     return "\n\n".join([import_code, wandb_init, agent_init, train_code])
 
@@ -99,7 +87,9 @@ def generate_python_script(algo_name: str, env_name: str, **kwargs):
     path.mkdir(parents=True, exist_ok=True)
     path = path / f"{algo_name}_{env_name}.py".lower()
     path.write_text(code)
-    os.system(f"black {path}")
+    black_result = subprocess.run(["black", str(path)], capture_output=True)
+    if black_result.returncode != 0:
+        print(black_result.stderr.decode("utf-8"))
     return str(path)
 
 if __name__ == '__main__':
