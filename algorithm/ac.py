@@ -47,11 +47,11 @@ class OffPolicyActorCritic(OffPolicyRLModel):
         if epsilon and np.random.random() < epsilon:
             action = np.random.randint(self.action_dim)
         else:
-            state = torch.tensor(state, dtype=torch.float32).to(self.device)
-            action_prob = self.target_policy_net(state)
-            action_dist = torch.distributions.Categorical(action_prob)
-            action = action_dist.sample().item()
-
+            with torch.no_grad(), self.eval_mode():
+                state = torch.tensor(state, dtype=torch.float32).to(self.device)
+                action_prob = self.policy_net(state)
+                action_dist = torch.distributions.Categorical(action_prob)
+                action = action_dist.sample().item()
         return action
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -69,21 +69,20 @@ class OffPolicyActorCritic(OffPolicyRLModel):
         if epsilon and np.random.random() < epsilon:
             action = np.random.choice(self.action_dim, p=mask/mask.sum())
         else:
-            state = torch.tensor(state, dtype=torch.float32).to(self.device)
-            action_prob = self.target_policy_net(state)
-            action_prob = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
-            action_dist = torch.distributions.Categorical(action_prob)
-            action = action_dist.sample().item()
+            with torch.no_grad(), self.eval_mode():
+                state = torch.tensor(state, dtype=torch.float32).to(self.device)
+                action_prob = self.policy_net(state)
+                action_prob = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
+                action_dist = torch.distributions.Categorical(action_prob)
+                action = action_dist.sample().item()
         
         return action
     
     def predict_action(self, state) -> int:
-        self.policy_net.eval()
-        with torch.no_grad():
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob.argmax(dim=1).item()
-        self.policy_net.train()
         return action
     
     def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -94,13 +93,11 @@ class OffPolicyActorCritic(OffPolicyRLModel):
             mask = np.array(mask)
         mask = mask.astype(int)
 
-        self.policy_net.eval()
-        with torch.no_grad():
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
             action = action.argmax(dim=1).item()
-        self.policy_net.train()
         return action
     
     def update(self) -> None:
@@ -116,7 +113,7 @@ class OffPolicyActorCritic(OffPolicyRLModel):
 
         v_value = self.value_net(states)
 
-        with torch.no_grad(): 
+        with torch.no_grad(), self.eval_mode(): 
             next_v_value = self.target_value_net(next_states)
             td_target = rewards + self.gamma * next_v_value * (1 - dones)
             td_delta = td_target - v_value
@@ -219,22 +216,21 @@ class OffPolicyActorCriticContinuous(OffPolicyRLModel):
 
 
     def take_action(self, state) -> np.ndarray:
-        state = torch.tensor(state, dtype=torch.float32).to(self.device)
-        mu, std = self.target_policy_net(state)
-        action_dist = torch.distributions.Normal(mu, std + 1e-6)
-        action = action_dist.sample().cpu().numpy().reshape(self.action_shape)
+        with torch.no_grad(), self.eval_mode():
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
+            mu, std = self.policy_net(state)
+            action_dist = torch.distributions.Normal(mu, std + 1e-6)
+            action = action_dist.sample().cpu().numpy().reshape(self.action_shape)
         return action
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
         raise NotImplementedError('take_action_with_mask is not implemented')
     
     def predict_action(self, state) -> np.ndarray:
-        self.policy_net.eval()
-        with torch.no_grad():
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             mu, _ = self.policy_net(state)
             action = mu.cpu().numpy().reshape(self.action_shape)
-        self.policy_net.train()
         return action
     
     def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -253,7 +249,7 @@ class OffPolicyActorCriticContinuous(OffPolicyRLModel):
 
         v_value = self.value_net(states)
 
-        with torch.no_grad(): 
+        with torch.no_grad(), self.eval_mode(): 
             next_v_value = self.target_value_net(next_states)
             td_target = rewards + self.gamma * next_v_value * (1 - dones)
             td_delta = td_target - v_value
@@ -359,12 +355,11 @@ class ActorCritic(OnPolicyRLModel):
         if epsilon and np.random.random() < epsilon:
             action = np.random.randint(self.action_dim)
         else:
-            self.policy_net.eval()
-            state = torch.tensor(state, dtype=torch.float32).to(self.device)
-            action_prob = self.policy_net(state).detach()
-            action_dist = torch.distributions.Categorical(action_prob)
-            action = action_dist.sample().item()
-            self.policy_net.train()
+            with torch.no_grad(), self.eval_mode():
+                state = torch.tensor(state, dtype=torch.float32).to(self.device)
+                action_prob = self.policy_net(state)
+                action_dist = torch.distributions.Categorical(action_prob)
+                action = action_dist.sample().item()
         return action
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -382,22 +377,19 @@ class ActorCritic(OnPolicyRLModel):
         if epsilon and np.random.random() < epsilon:
             action = np.random.choice(self.action_dim, p=mask/mask.sum())
         else:
-            self.policy_net.eval()
-            state = torch.tensor(state, dtype=torch.float32).to(self.device)
-            action_prob = self.policy_net(state).detach()
-            action_prob = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
-            action_dist = torch.distributions.Categorical(action_prob)
-            action = action_dist.sample().item()
-            self.policy_net.train()
+            with torch.no_grad(), self.eval_mode():
+                state = torch.tensor(state, dtype=torch.float32).to(self.device)
+                action_prob = self.policy_net(state)
+                action_prob = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
+                action_dist = torch.distributions.Categorical(action_prob)
+                action = action_dist.sample().item()
         return action
     
     def predict_action(self, state) -> int:
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob.argmax(dim=1).item()
-            self.policy_net.train()
         return action
     
     def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -408,13 +400,11 @@ class ActorCritic(OnPolicyRLModel):
             mask = np.array(mask)
         mask = mask.astype(int)
 
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
             action = action.argmax(dim=1).item()
-            self.policy_net.train()
         return action
     
     def update(self, transition_dict) -> None:
@@ -433,7 +423,7 @@ class ActorCritic(OnPolicyRLModel):
 
         v_value = self.value_net(states)
 
-        with torch.no_grad(): 
+        with torch.no_grad(), self.eval_mode(): 
             next_v_value = self.value_net(next_states)
             td_target = rewards + self.gamma * next_v_value * (1 - dones)
             td_delta = td_target - v_value
@@ -515,23 +505,21 @@ class ActorCriticContinuous(OnPolicyRLModel):
 
 
     def take_action(self, state) -> np.ndarray:
-        self.policy_net.eval()
-        state = torch.tensor(state, dtype=torch.float32).to(self.device)
-        mu, std = self.policy_net(state)
-        action_dist = torch.distributions.Normal(mu.detach(), std.detach() + 1e-6)
-        action = action_dist.sample().cpu().numpy().reshape(self.action_shape)
-        self.policy_net.train()
+        with torch.no_grad(), self.eval_mode():
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
+            mu, std = self.policy_net(state)
+            action_dist = torch.distributions.Normal(mu, std + 1e-6)
+            action = action_dist.sample().cpu().numpy().reshape(self.action_shape)
         return action
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
         raise NotImplementedError('take_action_with_mask is not implemented')
     
     def predict_action(self, state) -> np.ndarray:
-        self.policy_net.eval()
-        state = torch.tensor(state, dtype=torch.float32).to(self.device)
-        mu, _ = self.policy_net(state)
-        action = mu.detach().cpu().numpy().reshape(self.action_shape)
-        self.policy_net.train()
+        with torch.no_grad(), self.eval_mode():
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
+            mu, _ = self.policy_net(state)
+            action = mu.cpu().numpy().reshape(self.action_shape)
         return action
     
     def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -552,7 +540,7 @@ class ActorCriticContinuous(OnPolicyRLModel):
 
         v_value = self.value_net(states)
 
-        with torch.no_grad(): 
+        with torch.no_grad(), self.eval_mode(): 
             next_v_value = self.value_net(next_states)
             td_target = rewards + self.gamma * next_v_value * (1 - dones)
             td_delta = td_target - v_value

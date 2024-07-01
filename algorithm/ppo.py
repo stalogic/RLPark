@@ -47,12 +47,11 @@ class PPO(OnPolicyRLModel):
         if epsilon and np.random.random() < epsilon:
             action = np.random.randint(self.action_dim)
         else:
-            self.policy_net.eval()
-            state = torch.tensor(state, dtype=torch.float32).to(self.device)
-            action_prob = self.policy_net(state).detach()
-            action_dist = torch.distributions.Categorical(action_prob)
-            action = action_dist.sample().item()
-            self.policy_net.train()
+            with torch.no_grad(), self.eval_mode():
+                state = torch.tensor(state, dtype=torch.float32).to(self.device)
+                action_prob = self.policy_net(state)
+                action_dist = torch.distributions.Categorical(action_prob)
+                action = action_dist.sample().item()
         return action
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -70,22 +69,19 @@ class PPO(OnPolicyRLModel):
         if epsilon and np.random.random() < epsilon:
             action = np.random.choice(self.action_dim, p=mask/mask.sum())
         else:
-            self.policy_net.eval()
-            state = torch.tensor(state, dtype=torch.float32).to(self.device)
-            action_prob = self.policy_net(state).detach()
-            action_prob = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
-            action_dist = torch.distributions.Categorical(action_prob)
-            action = action_dist.sample().item()
-            self.policy_net.train()
+            with torch.no_grad(), self.eval_mode():
+                state = torch.tensor(state, dtype=torch.float32).to(self.device)
+                action_prob = self.policy_net(state)
+                action_prob = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
+                action_dist = torch.distributions.Categorical(action_prob)
+                action = action_dist.sample().item()
         return action
     
     def predict_action(self, state) -> int:
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob.argmax(dim=1).item()
-            self.policy_net.train()
         return action
     
     def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -96,13 +92,11 @@ class PPO(OnPolicyRLModel):
             mask = np.array(mask)
         mask = mask.astype(int)
 
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action = action_prob * torch.tensor(mask, dtype=action_prob.dtype)
             action = action.argmax(dim=1).item()
-            self.policy_net.train()
         return action
     
     def update(self, transition_dict) -> None:
@@ -120,7 +114,7 @@ class PPO(OnPolicyRLModel):
         dones = torch.tensor(dones, dtype=torch.float32).to(self.device)
 
 
-        with torch.no_grad(): 
+        with torch.no_grad(), self.eval_mode(): 
             next_v_value = self.value_net(next_states)
             td_target = rewards + self.gamma * next_v_value * (1 - dones)
             td_delta = td_target - self.value_net(states)
@@ -214,25 +208,21 @@ class PPOContinuous(OnPolicyRLModel):
 
 
     def take_action(self, state) -> np.ndarray:
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             mu, std = self.policy_net(state)
             action_dist = torch.distributions.Normal(mu, std + 1e-6)
             action = action_dist.sample().cpu().numpy()
-            self.policy_net.train()
         return np.reshape(action, self.action_shape)
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
         raise NotImplementedError('take_action_with_mask is not implemented')
     
     def predict_action(self, state) -> np.ndarray:
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             mu, _ = self.policy_net(state)
             action = mu.cpu().numpy()
-            self.policy_net.train()
         return np.reshape(action, self.action_shape)
     
     def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -252,7 +242,7 @@ class PPOContinuous(OnPolicyRLModel):
         next_states = torch.tensor(next_states, dtype=torch.float32).to(self.device)
         dones = torch.tensor(dones, dtype=torch.float32).to(self.device)
 
-        with torch.no_grad(): 
+        with torch.no_grad(), self.eval_mode():
             next_v_value = self.value_net(next_states)
             td_target = rewards + self.gamma * next_v_value * (1 - dones)
             td_delta = td_target - self.value_net(states)

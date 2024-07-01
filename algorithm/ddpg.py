@@ -42,20 +42,16 @@ class DDPG(OffPolicyRLModel):
     
 
     def take_action(self, state:np.ndarray) -> np.ndarray:
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float).to(self.device)
             action = self.policy_net(state).cpu().numpy()
             action = action + np.random.normal(0, self.action_bound * 0.1, size=action.shape)
-            self.policy_net.train()
         return np.reshape(action, self.action_shape)
     
     def predict_action(self, state) -> np.ndarray:
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float).to(self.device)
             action = self.policy_net(state).cpu().numpy()
-            self.policy_net.train()
         return np.reshape(action, self.action_shape)
     
     def update(self) -> None:
@@ -69,11 +65,9 @@ class DDPG(OffPolicyRLModel):
         next_states = torch.tensor(next_states, dtype=torch.float).to(self.device)
         dones = torch.tensor(dones, dtype=torch.float).view(-1, 1).to(self.device)
 
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             next_q_values = self.qvalue_net(next_states, self.target_policy_net(next_states))
             q_targets = rewards + self.gamma * next_q_values * (1 - dones)
-            self.policy_net.train()
         
         value_loss = torch.nn.functional.mse_loss(self.qvalue_net(states, actions), q_targets)
         self.qvalue_optimizer.zero_grad()

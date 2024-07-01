@@ -46,13 +46,11 @@ class SAC(OffPolicyRLModel):
         self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=self.kwargs.get('alpha_lr', 1e-2))
 
     def take_action(self, state) -> int:
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action_dist = torch.distributions.Categorical(action_prob)
             action = action_dist.sample().item()
-            self.policy_net.train()
         return action
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -63,23 +61,19 @@ class SAC(OffPolicyRLModel):
             mask = np.array(mask)
         mask = mask.astype(np.float32)
 
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action_dist = torch.distributions.Categorical(action_prob * mask)
             action = action_dist.sample().item()
-            self.policy_net.train()
         return action
     
     def predict_action(self, state) -> int:
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action_dist = torch.distributions.Categorical(action_prob)
             action = action_dist.sample().item()
-            self.policy_net.train()
         return action
     
     def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -90,18 +84,15 @@ class SAC(OffPolicyRLModel):
             mask = np.array(mask)
         mask = mask.astype(np.float32)
 
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_prob = self.policy_net(state)
             action_prob = action_prob * torch.tensor(mask, dtype=torch.float32).to(self.device)
             action = action_prob.argmax(dim=1).item()
-            self.policy_net.train()
         return action
     
     def _calc_target(self, rewards, next_states, dones):
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             next_action_prob = self.policy_net(next_states)
             next_log_action_prob = torch.log(next_action_prob + 1e-8)
             entropy = -torch.sum(next_action_prob * next_log_action_prob, dim=1, keepdim=True)
@@ -153,7 +144,6 @@ class SAC(OffPolicyRLModel):
         alpha_loss = torch.mean((entropy - self.target_entropy).detach() * self.log_alpha.exp())
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
-        # self.log_alpha.grad /= self.log_alpha.exp()
         torch.nn.utils.clip_grad_norm_(self.log_alpha, self.kwargs.get('alpha_max_grad_norm', 0.3))
         self.alpha_optimizer.step()
 
@@ -215,23 +205,19 @@ class SACContinuous(OffPolicyRLModel):
         self.q2_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.q2_optimizer, step_size=self.kwargs.get('value_lr_decay_step', 100), gamma=self.kwargs.get('value_lr_decay_rate', 0.955))
 
     def take_action(self, state:list|np.ndarray) -> list|np.ndarray:
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32, device=self.device)
             mu, std = self.policy_net(state)
             action_dist = torch.distributions.Normal(mu, std)
             sample = action_dist.sample()
             action = torch.tanh(sample) * self.action_bound
-            self.policy_net.train()
         return np.reshape(action.cpu().numpy(), self.action_shape)
     
     def predict_action(self, state:list|np.ndarray) -> list|np.ndarray:
-        with torch.no_grad():
-            self.policy_net.eval()
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float32, device=self.device)
             mu, _ = self.policy_net(state)
             action = torch.tanh(mu) * self.action_bound
-            self.policy_net.train()
         return np.reshape(action.cpu().numpy(), self.action_shape)
     
     def _calc_action_log_prob(self, state:list|np.ndarray) -> torch.Tensor:
@@ -245,7 +231,7 @@ class SACContinuous(OffPolicyRLModel):
         return action, log_prob
     
     def _calc_target(self, rewards, next_states, dones):
-        with torch.no_grad():
+        with torch.no_grad(), self.eval_mode():
             next_actions, log_probs = self._calc_action_log_prob(next_states)
             entropy = -log_probs
             q1_values = self.target_q1_net(next_states, next_actions)

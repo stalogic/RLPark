@@ -38,8 +38,9 @@ class DQN(OffPolicyRLModel):
         if np.random.random() < self.epsilon:
             action = np.random.randint(self.action_dim)
         else:
-            state = torch.tensor(state, dtype=torch.float).to(self.device)
-            action = self.target_q_net(state).detach().argmax().item()
+            with torch.no_grad(), self.eval_mode():
+                state = torch.tensor(state, dtype=torch.float).to(self.device)
+                action = self.q_net(state).argmax().item()
         return action
     
     def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -52,20 +53,18 @@ class DQN(OffPolicyRLModel):
         if np.random.random() < self.epsilon:
             action = np.random.choice(self.action_dim, p=mask/mask.sum())
         else:
-            state = torch.tensor(state, dtype=torch.float).to(self.device)
-            q_value = self.target_q_net(state).detach().numpy()
-            q_value[:, mask == 0] = -np.inf
-            action = q_value.argmax()
+            with torch.no_grad(), self.eval_mode():
+                state = torch.tensor(state, dtype=torch.float).to(self.device)
+                q_value = self.q_net(state).numpy()
+                q_value[:, mask == 0] = -np.inf
+                action = q_value.argmax()
 
         return action
-            
     
     def predict_action(self, state) -> int:
-        self.q_net.eval()
-        with torch.no_grad():
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float).to(self.device)
             action = self.q_net(state).argmax().item()
-        self.q_net.train()
         return action
     
     def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
@@ -75,13 +74,11 @@ class DQN(OffPolicyRLModel):
             mask = np.array(mask)
         mask = mask.astype(int)
         
-        self.q_net.eval()
-        with torch.no_grad():
+        with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float).to(self.device)
-            q_value = self.q_net(state).detach().numpy()
+            q_value = self.q_net(state).numpy()
             q_value[:, mask == 0] = -np.inf
             action = q_value.argmax()
-        self.q_net.train()
         return action
 
     def update(self) -> None:
@@ -96,7 +93,7 @@ class DQN(OffPolicyRLModel):
         dones = torch.tensor(dones, dtype=torch.float).view(-1, 1).to(self.device)
 
         q_values = self.q_net(states).gather(1, actions)
-        with torch.no_grad():
+        with torch.no_grad(), self.eval_mode():
             next_q_values = self.target_q_net(next_states).max(1)[0].view(-1, 1)
             q_target = rewards + self.gamma * next_q_values * (1 - dones)
 

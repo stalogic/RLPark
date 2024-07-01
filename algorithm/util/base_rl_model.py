@@ -1,4 +1,7 @@
+import torch
 import numpy as np
+from contextlib import contextmanager
+
 from . import ReplayBuffer
 
 class OffPolicyRLModel(object):
@@ -12,6 +15,17 @@ class OffPolicyRLModel(object):
             target_param = target_net.state_dict()[param_name]
             net_param = net.state_dict()[param_name]
             target_param.data.copy_(target_param.data * (1 - tau) + net_param.data * tau)
+
+    @contextmanager
+    def eval_mode(self):
+        changed_model :dict[str, torch.nn.Module] = dict()
+        for key, field in self.__dict__.items():
+            if isinstance(field, torch.nn.Module) and field.training:
+                field.eval()
+                changed_model[key] = field
+        yield
+        for key, field in changed_model.items():
+            field.train()
     
     def add_experience(self, state:list|np.ndarray, action:int|float|list|np.ndarray, reward:int|float|list|np.ndarray, next_state:list|np.ndarray, done:bool|int|float) -> None:
         if isinstance(state, list):
@@ -39,4 +53,15 @@ class OffPolicyRLModel(object):
 class OnPolicyRLModel(object):
     def __init__(self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000, **kwargs) -> None:
         self.count = 0
+
+    @contextmanager
+    def eval_mode(self):
+        changed_model :dict[str, torch.nn.Module] = dict()
+        for key, field in self.__dict__.items():
+            if isinstance(field, torch.nn.Module) and field.training:
+                field.eval()
+                changed_model[key] = field
+        yield
+        for key, field in changed_model.items():
+            field.train()
     
