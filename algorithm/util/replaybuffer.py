@@ -1,55 +1,21 @@
 import numpy as np
+import collections
+import random
 
 class ReplayBuffer(object):
-
-    def __init__(self, state_dim_or_shape:int|tuple|list, action_dim_or_shape:int|tuple|list=1, capacity=10000):
-        """
-        Replay buffer for RL
-        :param state_shape: 目前仅支持一维状态
-        :param action_shape: 如果是discrete环境，action_shape=1，如果是continuous环境，action_shape=action_space.n
-        :param capacity: 存储容量
-        """
-        self.capacity = capacity
-        self.len = 0
-        self.index = 0
-
-        if not isinstance(state_dim_or_shape, (int, tuple, list)):
-            raise ValueError('state_dim_or_shape must be int or tuple or list')
-        if not isinstance(action_dim_or_shape, (int, tuple, list)):
-            raise ValueError('action_dim_or_shape must be int or tuple or list')
-        
-        self.state_shape = (state_dim_or_shape, ) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
-        self.action_shape = (1,) if isinstance(action_dim_or_shape, int) else tuple(action_dim_or_shape)
-
-        self.states = np.zeros((capacity, ) + self.state_shape, dtype=np.float32)
-        self.next_states = np.zeros((capacity, ) + self.state_shape, dtype=np.float32)
-        self.actions = np.zeros((capacity,) + self.action_shape, dtype=np.float32)
-
-        self.rewards = np.zeros((capacity, 1), dtype=np.float32)
-        self.dones = np.zeros((capacity, 1), dtype=np.float32)
+    def __init__(self, capacity=100000, *args, **kwargs):
+        self.buffer = collections.deque(maxlen=capacity)
 
     def __len__(self):
-        return self.len
+         return len(self.buffer)
 
     def store(self, state, action, reward, next_state, done):
-        assert state.shape[0] == action.shape[0] == reward.shape[0] == next_state.shape[0] == done.shape[0] > 0
-        size = state.shape[0]
+        self.buffer.append((state, action, reward, next_state, done))
 
-        if self.len + size > self.capacity:
-            self.len = self.capacity
-        else:
-            self.len += size
-        
-        slices = [(self.index + i) % self.capacity for i in range(size)]
-        self.index = (self.index + size) % self.capacity
+    def sample(self, batch_size):
+        transitions = random.sample(self.buffer, batch_size)
+        state, action, reward, next_state, done = zip(*transitions)
+        return np.array(state), action, reward, np.array(next_state), done
 
-        self.states[slices] = state
-        self.actions[slices] = action
-        self.rewards[slices] = reward
-        self.next_states[slices] = next_state
-        self.dones[slices] = done
-
-    def sample(self, batch_size): 
-        assert 0 < batch_size <= self.len
-        index = np.random.randint(0, self.len, batch_size)
-        return self.states[index], self.actions[index], self.rewards[index], self.next_states[index], self.dones[index]
+    def size(self):
+        return len(self.buffer)
