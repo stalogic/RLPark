@@ -38,9 +38,9 @@ class SAC(OffPolicyRLModel):
         self.policy_optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=self.kwargs.get('policy_lr', lr))
         self.q1_optimizer = torch.optim.Adam(self.q1_net.parameters(), lr=self.kwargs.get('value_lr', lr))
         self.q2_optimizer = torch.optim.Adam(self.q2_net.parameters(), lr=self.kwargs.get('value_lr', lr))
-        self.policy_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.policy_optimizer, step_size=self.kwargs.get('policy_lr_decay_step', 100), gamma=self.kwargs.get('policy_lr_decay_rate', 0.955))
-        self.q1_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.q1_optimizer, step_size=self.kwargs.get('value_lr_decay_step', 100), gamma=self.kwargs.get('value_lr_decay_rate', 0.955))
-        self.q2_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.q2_optimizer, step_size=self.kwargs.get('value_lr_decay_step', 100), gamma=self.kwargs.get('value_lr_decay_rate', 0.955))
+        self.policy_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.policy_optimizer, step_size=self.kwargs.get("scheduler_step_size", 100), gamma=0.955)
+        self.q1_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.q1_optimizer, step_size=self.kwargs.get("scheduler_step_size", 100), gamma=0.955)
+        self.q2_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.q2_optimizer, step_size=self.kwargs.get("scheduler_step_size", 100), gamma=0.955)
 
         self.log_alpha = torch.tensor(np.log(0.01), dtype=torch.float32, requires_grad=True, device=device)
         self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=self.kwargs.get('alpha_lr', 1e-2))
@@ -149,9 +149,6 @@ class SAC(OffPolicyRLModel):
 
         self._soft_update_target_net(self.q1_net, self.target_q1_net, self.tau)
         self._soft_update_target_net(self.q2_net, self.target_q2_net, self.tau)
-        self.q1_lr_scheduler.step()
-        self.q2_lr_scheduler.step()
-        self.policy_lr_scheduler.step()
 
         log_data = {
             'Tr_q1_loss': q1_loss.item(),
@@ -200,9 +197,9 @@ class SACContinuous(OffPolicyRLModel):
         self.q1_optimizer = torch.optim.Adam(self.q1_net.parameters(), lr=self.kwargs.get('value_lr', self.lr))
         self.q2_optimizer = torch.optim.Adam(self.q2_net.parameters(), lr=self.kwargs.get('value_lr', self.lr))
         self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=self.kwargs.get('alpha_lr', 1e-2))
-        self.policy_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.policy_optimizer, step_size=self.kwargs.get('policy_lr_decay_step', 100), gamma=self.kwargs.get('policy_lr_decay_rate', 0.955))
-        self.q1_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.q1_optimizer, step_size=self.kwargs.get('value_lr_decay_step', 100), gamma=self.kwargs.get('value_lr_decay_rate', 0.955))
-        self.q2_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.q2_optimizer, step_size=self.kwargs.get('value_lr_decay_step', 100), gamma=self.kwargs.get('value_lr_decay_rate', 0.955))
+        self.policy_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.policy_optimizer, step_size=self.kwargs.get("scheduler_step_size", 100), gamma=0.955)
+        self.q1_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.q1_optimizer, step_size=self.kwargs.get("scheduler_step_size", 100), gamma=0.955)
+        self.q2_lr_scheduler = torch.optim.lr_scheduler.StepLR(self.q2_optimizer, step_size=self.kwargs.get("scheduler_step_size", 100), gamma=0.955)
 
     def take_action(self, state:list|np.ndarray) -> list|np.ndarray:
         with torch.no_grad(), self.eval_mode():
@@ -277,11 +274,6 @@ class SACContinuous(OffPolicyRLModel):
         self.alpha_optimizer.zero_grad()
         alpha_loss.backward()
         self.alpha_optimizer.step()
-
-
-        self.policy_lr_scheduler.step()
-        self.q1_lr_scheduler.step()
-        self.q2_lr_scheduler.step()
 
         self._soft_update_target_net(self.q1_net, self.target_q1_net, self.tau)
         self._soft_update_target_net(self.q2_net, self.target_q2_net, self.tau)

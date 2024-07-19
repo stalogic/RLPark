@@ -191,3 +191,33 @@ class DeterministicPolicyNetwork(torch.nn.Module):
         return x * self.action_bound
 
 
+class DiscreteDeterministicPolicyNetwork(torch.nn.Module):
+    """用于离散动作DDPG算法的策略网络，输出gumbel-softmax分布的logits"""
+    
+    def __init__(self, state_shape:tuple, action_shape:tuple, hidden_dims:tuple=(128,), conv_layers:tuple=((32, 3),), **kwargs):
+        super(DiscreteDeterministicPolicyNetwork, self).__init__()
+        self.state_shape = state_shape
+        self.action_shape = action_shape
+
+        if len(self.state_shape) < 3:
+            self.mlp = MLPNetwork(np.prod(state_shape), np.prod(action_shape), hidden_dims, **kwargs)
+        elif len(self.state_shape) == 3:
+            self.cnn = CNNNetwork(state_shape, hidden_dims[0], conv_layers, **kwargs)
+            self.mlp = MLPNetwork(hidden_dims[0], np.prod(action_shape), hidden_dims, **kwargs)
+        else:
+            raise ValueError("state_shape must be 1D or 3D")
+
+        print(self)
+
+    def forward(self, s) -> torch.Tensor:
+        if hasattr(self, "cnn"):
+            x = torch.reshape(s, (-1, *self.state_shape))
+            x = self.cnn(x)
+            x = self.mlp(x)
+        else:
+            x = torch.reshape(s, (-1, np.prod(self.state_shape)))
+            x = self.mlp(x)
+        x = torch.reshape(x, (-1, *self.action_shape))
+        return x
+
+

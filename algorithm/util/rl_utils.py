@@ -3,6 +3,8 @@ import tqdm
 import numpy as np
 import wandb
 
+from .base_rl_model import OnPolicyRLModel, OffPolicyRLModel
+
 def compute_advantage(gamma, lamda, td_delta):
     td_delta = td_delta.detach().cpu().numpy()
     advantage_list = []
@@ -35,7 +37,7 @@ def train_and_evaluate(env, agent, num_episodes=1000, val_env=None, **kwargs):
     else:
         train_and_evaluate_onpolicy_agent(env, agent, num_episodes, val_env, **kwargs)
 
-def train_and_evaluate_offpolicy_agent(env, agent, num_episodes=1000, val_env=None, **kwargs):
+def train_and_evaluate_offpolicy_agent(env, agent:OffPolicyRLModel, num_episodes=1000, val_env=None, **kwargs):
     
     # 初始化用于记录指标的字典
     metrics = {
@@ -61,13 +63,16 @@ def train_and_evaluate_offpolicy_agent(env, agent, num_episodes=1000, val_env=No
                 # 学习经验
                 agent.add_experience(state, action, reward, next_state, done)
                 state = next_state
+
+                # 更新智能体模型
+                agent.update()
                 
                 # 判断episode是否结束
                 if done or terminal:
                     break
             
-            # 更新智能体模型
-            agent.update()
+            # 更新学习率
+            agent.update_learning_rate()
 
             # 达到评估周期时进行性能评估
             if (i_episode + 1) % kwargs.get("num_eval_frequence", 100) == 0:
@@ -120,7 +125,7 @@ def train_and_evaluate_offpolicy_agent(env, agent, num_episodes=1000, val_env=No
                 except: pass  # 忽略wandb未安装或配置不当的情况
 
 
-def train_and_evaluate_onpolicy_agent(env, agent, num_episodes=1000, val_env=None, **kwargs):
+def train_and_evaluate_onpolicy_agent(env, agent:OnPolicyRLModel, num_episodes=1000, val_env=None, **kwargs):
 
     # 初始化用于记录指标的字典
     metrics = {
@@ -158,6 +163,7 @@ def train_and_evaluate_onpolicy_agent(env, agent, num_episodes=1000, val_env=Non
             
             # 更新智能体模型
             agent.update(transition_dict)
+            agent.update_learning_rate()
 
             # 达到评估周期时进行性能评估
             if (i_episode + 1) % kwargs.get("num_eval_frequence", 100) == 0:
