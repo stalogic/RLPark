@@ -35,7 +35,7 @@ class OffPolicyRLModel(OnPolicyRLModel):
 
     def __init__(self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000, **kwargs) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, capacity, **kwargs)
-        self.replay_buffer = ReplayBuffer(state_dim_or_shape, action_dim_or_shape, capacity)
+        self.replay_buffer = ReplayBuffer(capacity)
 
     def add_experience(self, state:list|np.ndarray, action:int|float|list|np.ndarray, reward:int|float|list|np.ndarray, next_state:list|np.ndarray, done:bool|int|float) -> None:
         if isinstance(state, list):
