@@ -77,9 +77,9 @@ def mountain_car_continuous_v1(**kwargs) -> BaseEnv:
         def reward_fn(self, obs=None, reward=None, done=None, terminal=None):
             """done=False时奖励设置为`reward + abs(x+0.5) + 10 * abs(v)`, x为位置, v为速度"""
             if done:
-                return reward
+                return reward + 20 * (1000 - self.total_steps)
             else:
-                return reward + abs(obs[0] + 0.5) + 10 * abs(obs[1])
+                return reward + abs(obs[0] + 0.5) + 100 * abs(obs[1])
     return MountainCarContinuousEnvV1('MountainCarContinuous-v0', **kwargs)
 
 def mountain_car_continuous_v2(**kwargs) -> BaseEnv:
@@ -114,7 +114,13 @@ def mountain_car_continuous_v3(**kwargs) -> BaseEnv:
                 s = 0 if self.total_steps >= 999 else 999 - self.total_steps
                 return reward + s * np.log1p(s)
             else:
-                return reward + abs(obs[0] + 0.5) + 10 * abs(obs[1]) - 0.1 * np.log1p(self.total_steps)
+                height = abs(obs[0] + 0.5)
+                velocity = 200*abs(obs[1])
+                penatly = -0.01 * np.log1p(self.total_steps)
+                reward_ = reward + height + velocity + penatly
+                print(f"steps: {self.total_steps}, raw_reward: {reward:.3f}, height: {height:.3f}, velocity: {velocity:.3f}, penatly: {penatly:.3f}, reward: {reward_:.3f}")
+                input(">>>")
+                return reward_
     return MountainCarContinuousEnvV3('MountainCarContinuous-v0', **kwargs)
 
 
