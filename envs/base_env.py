@@ -64,7 +64,6 @@ class BaseEnv(object):
     
     def step(self, action):
         if isinstance(action, (tuple, list, np.ndarray)) and isinstance(self.env.action_space, gym.spaces.discrete.Discrete):
-            print(f"one hot {action=}")
             if np.isclose(np.sum(np.abs(action)), 1.0) :
                 action = np.argmax(action)
             else:
