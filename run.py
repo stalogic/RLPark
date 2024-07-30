@@ -32,7 +32,7 @@ def main(run: bool = False):
             path = generate_python_script(
                 algo_name,
                 env_name,
-                device="cpu",
+                device="cuda",
                 num_episodes=500,
                 hidden_dims=(64, 32),
                 conv_layers=((32, 3), (16, 3)), # input shape (-1, 1, 84, 84), 经过CNN网络并Flatten后维度为1024
