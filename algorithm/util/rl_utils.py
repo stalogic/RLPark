@@ -6,6 +6,22 @@ import wandb
 
 from .base_rl_model import OnPolicyRLModel, OffPolicyRLModel
 
+class MovingAverage(object):
+    def __init__(self, gamma=0.9) -> None:
+        self.gamma = gamma
+        self.sum = 0.0
+        self.factor = 1.0
+
+    def append(self, value):
+        self.sum *= self.gamma
+        self.sum += value
+        self.factor *= self.gamma
+        self.factor += 1.0
+
+    @property
+    def value(self) -> int:
+        return int(self.sum / self.factor)
+
 def compute_advantage(gamma, lamda, td_delta):
     td_delta = td_delta.detach().cpu().numpy()
     advantage_list = []
@@ -39,6 +55,9 @@ def train_and_evaluate(env, agent, num_episodes=1000, val_env=None, **kwargs):
         train_and_evaluate_onpolicy_agent(env, agent, num_episodes, val_env, **kwargs)
 
 def train_and_evaluate_offpolicy_agent(env, agent:OffPolicyRLModel, num_episodes=1000, val_env=None, **kwargs):
+
+    game_step = MovingAverage()
+    train_freq = None
     
     # 初始化用于记录指标的字典
     metrics = {
@@ -74,7 +93,8 @@ def train_and_evaluate_offpolicy_agent(env, agent:OffPolicyRLModel, num_episodes
                 game_time += time.time() - t0
 
                 # 更新智能体模型
-                agent.update()
+                if train_freq and episode_step % train_freq == 0:
+                    agent.update()
 
                 update_time += time.time() - t0
                 
@@ -87,6 +107,9 @@ def train_and_evaluate_offpolicy_agent(env, agent:OffPolicyRLModel, num_episodes
             # 更新学习率
             agent.update_learning_rate()
 
+            game_step.append(episode_step)
+            train_freq = game_step.value // kwargs.get("trains_per_episode", 10)
+
             logdata = {
                 "Tr_Index": i_episode,
                 "Tr_Episode_Return": episode_return,
@@ -96,6 +119,9 @@ def train_and_evaluate_offpolicy_agent(env, agent:OffPolicyRLModel, num_episodes
                 "Tr_Game_Time": game_time,
                 "Tr_Update_Time":update_time - game_time,
             }
+
+            try: wandb.log(logdata)
+            except: pass
 
             # 达到评估周期时进行性能评估
             if (i_episode + 1) % kwargs.get("num_eval_frequence", 100) == 0:
