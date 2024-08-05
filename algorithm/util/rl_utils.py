@@ -1,3 +1,4 @@
+import time
 import torch
 import tqdm
 import numpy as np
@@ -52,7 +53,10 @@ def train_and_evaluate_offpolicy_agent(env, agent:OffPolicyRLModel, num_episodes
         for i_episode in pbar:
             # 重置环境，开始新episode
             state, _ = env.reset()
+            game_time, update_time = 0.0, 0.0
+            episode_return, episode_step, episode_done, episode_terminal = 0.0, 0, None, None
             while True:
+                t0 = time.time()
                 # 选择并执行动作
                 if hasattr(env, "action_mask"):
                     action = agent.take_action_with_mask(state, env.action_mask)
@@ -64,15 +68,34 @@ def train_and_evaluate_offpolicy_agent(env, agent:OffPolicyRLModel, num_episodes
                 agent.add_experience(state, action, reward, next_state, done)
                 state = next_state
 
+                episode_return += reward
+                episode_step += 1
+
+                game_time += time.time() - t0
+
                 # 更新智能体模型
                 agent.update()
+
+                update_time += time.time() - t0
                 
                 # 判断episode是否结束
                 if done or terminal:
+                    episode_done = int(done)
+                    episode_terminal = int(terminal)
                     break
             
             # 更新学习率
             agent.update_learning_rate()
+
+            logdata = {
+                "Tr_Index": i_episode,
+                "Tr_Episode_Return": episode_return,
+                "Tr_Episode_Step": episode_step,
+                "Tr_Episode_Done": episode_done,
+                "Tr_Episode_Terminal": episode_terminal,
+                "Tr_Game_Time": game_time,
+                "Tr_Update_Time":update_time - game_time,
+            }
 
             # 达到评估周期时进行性能评估
             if (i_episode + 1) % kwargs.get("num_eval_frequence", 100) == 0:
@@ -141,6 +164,8 @@ def train_and_evaluate_onpolicy_agent(env, agent:OnPolicyRLModel, num_episodes=1
             # 重置环境，开始新episode
             state, _ = env.reset()
             transition_dict = {'states': [], 'actions': [], 'next_states': [], 'rewards': [], 'dones': []}
+            episode_return, episode_step, episode_done, episode_terminal = 0.0, 0, None, None
+            t0 = time.time()
             while True:
                 # 选择并执行动作
                 if hasattr(env, "action_mask"):
@@ -157,13 +182,36 @@ def train_and_evaluate_onpolicy_agent(env, agent:OnPolicyRLModel, num_episodes=1
                 transition_dict['dones'].append(done)
                 state = next_state
                 
+                episode_return += reward
+                episode_step += 1
+
                 # 判断episode是否结束
                 if done or terminal:
+                    episode_done = int(done)
+                    episode_terminal = int(terminal)
                     break
+
+            t1 = time.time()
             
             # 更新智能体模型
             agent.update(transition_dict)
             agent.update_learning_rate()
+
+            t2 = time.time()
+            logdata = {
+                "Tr_Index": i_episode,
+                "Tr_Episode_Return": episode_return,
+                "Tr_Episode_Step": episode_step,
+                "Tr_Episode_Done": episode_done,
+                "Tr_Episode_Terminal": episode_terminal,
+                "Tr_Game_Time": t1 - t0,
+                "Tr_Update_Time": t2 - t1,
+            }
+
+            # 更新进度条信息，并尝试通过wandb记录日志
+            pbar.set_postfix(logdata)
+            try: wandb.log(logdata)
+            except: pass  # 忽略wandb未安装或配置不当的情况
 
             # 达到评估周期时进行性能评估
             if (i_episode + 1) % kwargs.get("num_eval_frequence", 100) == 0:
