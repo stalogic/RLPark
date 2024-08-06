@@ -47,7 +47,7 @@ class QValueNetwork(torch.nn.Module):
 
         print(self)
 
-    def forward(self, s):
+    def forward(self, s) -> torch.Tensor:
         if hasattr(self, "cnn"):
             s = torch.reshape(s, (-1, *self.state_shape))
             x = self.cnn(s)
@@ -56,6 +56,41 @@ class QValueNetwork(torch.nn.Module):
             s = torch.reshape(s, (-1, np.prod(self.state_shape)))
             x = self.mlp(s)
         return x
+    
+
+class ValueAdvanceNetwork(torch.nn.Module):
+
+    def __init__(self, state_shape:tuple, action_dim:int, hidden_dims:tuple=(128,), conv_layers:tuple=((32, 3),), **kwargs):
+        super(ValueAdvanceNetwork, self).__init__()
+        self.state_shape = state_shape
+        self.action_dim = action_dim
+
+        if len(self.state_shape) < 3:
+            self.mlp = MLPNetwork(np.prod(state_shape), hidden_dims[-1], hidden_dims[:-1], **kwargs)
+        elif len(self.state_shape) == 3:
+            self.cnn = CNNNetwork(state_shape, hidden_dims[0], conv_layers, **kwargs)
+            self.mlp = MLPNetwork(hidden_dims[0], hidden_dims[-1], hidden_dims[:-1], **kwargs)
+        else:
+            raise ValueError("state_shape must be 1D or 3D")
+        
+        self.fc_value = torch.nn.Linear(hidden_dims[-1], 1)
+        self.fc_advance = torch.nn.Linear(hidden_dims[-1], action_dim)
+
+        print(self)
+
+    def forward(self, s) -> torch.Tensor:
+        if hasattr(self, "cnn"):
+            s = torch.reshape(s, (-1, *self.state_shape))
+            x = self.cnn(s)
+            x = self.mlp(x)
+        else:
+            s = torch.reshape(s, (-1, np.prod(self.state_shape)))
+            x = self.mlp(s)
+        
+        v = self.fc_value(x)
+        a = self.fc_advance(x)
+        q = v + a - a.mean(dim=1, keepdim=True)
+        return q
     
 
 class ContinuousQValueNetwork(torch.nn.Module):

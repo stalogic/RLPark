@@ -3,12 +3,12 @@ import copy
 import wandb
 import numpy as np
 from pathlib import Path
-from .util import OffPolicyRLModel, QValueNetwork
+from .util import OffPolicyRLModel, QValueNetwork, ValueAdvanceNetwork
 
 
 class DQN(OffPolicyRLModel):
     
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, epsilon=0.1, lr=1e-3, gamma=0.99, device='cpu', capacity=10000, **kwargs) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, epsilon=0.1, lr=1e-3, gamma=0.99, dueling_dqn:bool=False, double_dqn:bool=False, device='cpu', capacity=10000, **kwargs) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, capacity)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
             raise TypeError('state_dim_or_shape must be int, tuple or list')
@@ -21,10 +21,15 @@ class DQN(OffPolicyRLModel):
         self.epsilon = epsilon
         self.lr = lr
         self.gamma = gamma
+        self.dueling_dqn = dueling_dqn
+        self.double_dqn = double_dqn
         self.device = device
         self.kwargs = kwargs
 
-        self.q_net = QValueNetwork(self.state_shape, self.action_dim, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
+        if self.dueling_dqn:
+            self.q_net = ValueAdvanceNetwork(self.state_shape, self.action_dim, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
+        else:
+            self.q_net = QValueNetwork(self.state_shape, self.action_dim, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
         self.target_q_net = copy.deepcopy(self.q_net)
 
         self.q_net.to(device)
@@ -94,7 +99,11 @@ class DQN(OffPolicyRLModel):
 
         q_values = self.q_net(states).gather(1, actions)
         with torch.no_grad(), self.eval_mode():
-            next_q_values = self.target_q_net(next_states).max(1)[0].view(-1, 1)
+            if self.double_dqn:
+                max_action = self.q_net(next_states).argmax(1).view(-1, 1)
+                next_q_values = self.target_q_net(next_states).gather(1, max_action)
+            else:
+                next_q_values = self.target_q_net(next_states).max(1)[0].view(-1, 1)
             q_target = rewards + self.gamma * next_q_values * (1 - dones)
 
         loss = torch.nn.functional.mse_loss(q_values, q_target)
