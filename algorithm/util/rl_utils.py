@@ -93,7 +93,7 @@ def train_and_evaluate_offpolicy_agent(env, agent:OffPolicyRLModel, num_episodes
                 game_time += time.time() - t0
 
                 # 更新智能体模型
-                if train_freq and episode_step % train_freq == 0:
+                if train_freq is not None and episode_step % train_freq == 0:
                     agent.update()
 
                 update_time += time.time() - t0
