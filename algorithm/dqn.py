@@ -8,7 +8,7 @@ from .util import OffPolicyRLModel, QValueNetwork, ValueAdvanceNetwork
 
 class DQN(OffPolicyRLModel):
     
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, epsilon=0.1, lr=1e-3, gamma=0.99, dueling_dqn:bool=False, double_dqn:bool=False, device='cpu', capacity=10000, **kwargs) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, epsilon=0.05, lr=1e-3, gamma=0.99, dueling_dqn:bool=False, double_dqn:bool=False, device='cpu', capacity=10000, **kwargs) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, capacity)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
             raise TypeError('state_dim_or_shape must be int, tuple or list')
@@ -18,7 +18,8 @@ class DQN(OffPolicyRLModel):
         self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
         self.action_dim = action_dim_or_shape[0] if not isinstance(action_dim_or_shape, int) else action_dim_or_shape
         self.batch_size = batch_size
-        self.epsilon = epsilon
+        self.init_epsilon = 1.5
+        self.min_epsilon = epsilon
         self.lr = lr
         self.gamma = gamma
         self.dueling_dqn = dueling_dqn
@@ -38,6 +39,14 @@ class DQN(OffPolicyRLModel):
 
         self.q_net_optimizer = torch.optim.Adam(self.q_net.parameters(), lr=lr)
         self.q_net_scheduler = torch.optim.lr_scheduler.StepLR(self.q_net_optimizer, step_size=self.kwargs.get("scheduler_step_size", 100), gamma=0.955)
+
+    @property
+    def epsilon(self) -> float:
+        self.init_epsilon *= 1 - 1e-6
+        ep = self.init_epsilon if self.init_epsilon > self.min_epsilon else self.min_epsilon
+        try: wandb.log({'TR_Epsilon': ep})
+        except: pass
+        return ep
 
     def take_action(self, state) -> int:
         if np.random.random() < self.epsilon:

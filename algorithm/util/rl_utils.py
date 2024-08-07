@@ -111,13 +111,13 @@ def train_and_evaluate_offpolicy_agent(env, agent:OffPolicyRLModel, num_episodes
             train_freq = game_step.value // kwargs.get("trains_per_episode", 10)
 
             logdata = {
-                "Tr_Index": i_episode,
-                "Tr_Episode_Return": episode_return,
-                "Tr_Episode_Step": episode_step,
-                "Tr_Episode_Done": episode_done,
-                "Tr_Episode_Terminal": episode_terminal,
-                "Tr_Game_Time": game_time,
-                "Tr_Update_Time":update_time - game_time,
+                "TR_Index": i_episode,
+                "TR_Episode_Return": episode_return,
+                "TR_Episode_Step": episode_step,
+                "TR_Episode_Done": episode_done,
+                "TR_Episode_Terminal": episode_terminal,
+                "TR_Game_Time": game_time,
+                "TR_Update_Time":update_time - game_time,
             }
 
             try: wandb.log(logdata)
@@ -225,13 +225,13 @@ def train_and_evaluate_onpolicy_agent(env, agent:OnPolicyRLModel, num_episodes=1
 
             t2 = time.time()
             logdata = {
-                "Tr_Index": i_episode,
-                "Tr_Episode_Return": episode_return,
-                "Tr_Episode_Step": episode_step,
-                "Tr_Episode_Done": episode_done,
-                "Tr_Episode_Terminal": episode_terminal,
-                "Tr_Game_Time": t1 - t0,
-                "Tr_Update_Time": t2 - t1,
+                "TR_Index": i_episode,
+                "TR_Episode_Return": episode_return,
+                "TR_Episode_Step": episode_step,
+                "TR_Episode_Done": episode_done,
+                "TR_Episode_Terminal": episode_terminal,
+                "TR_Game_Time": t1 - t0,
+                "TR_Update_Time": t2 - t1,
             }
 
             # 更新进度条信息，并尝试通过wandb记录日志
