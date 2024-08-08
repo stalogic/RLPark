@@ -15,7 +15,14 @@ class ReplayBuffer(object):
     def sample(self, batch_size):
         transitions = random.sample(self.buffer, batch_size)
         state, action, reward, next_state, done = zip(*transitions)
-        return np.array(state), np.array(action), np.array(reward), np.array(next_state), np.array(done)
+        state = np.array(state)
+        action = np.array(action)
+        if len(action.shape) == 1:
+            action = np.reshape(action, (batch_size, 1))
+        reward = np.array(reward).reshape((batch_size, -1))
+        next_state = np.array(next_state)
+        done = np.array(done).reshape((batch_size, -1))
+        return state, action, reward, next_state, done
 
     def size(self):
         return len(self.buffer)
