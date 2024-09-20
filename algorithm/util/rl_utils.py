@@ -56,6 +56,7 @@ def train_and_evaluate(env, agent, num_episodes=1000, val_env=None, **kwargs):
 
 def train_and_evaluate_offpolicy_agent(env, agent:OffPolicyRLModel, num_episodes=1000, val_env=None, **kwargs):
 
+    # 统计单局游戏的移动平均步数，即episode长度的移动平均
     game_step = MovingAverage()
     train_freq = None
     
@@ -109,6 +110,8 @@ def train_and_evaluate_offpolicy_agent(env, agent:OffPolicyRLModel, num_episodes
 
             game_step.append(episode_step)
             train_freq = game_step.value // kwargs.get("trains_per_episode", 10)
+            if train_freq <= 0:
+                train_freq = 1
 
             logdata = {
                 "TR_Index": i_episode,

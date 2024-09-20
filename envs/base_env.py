@@ -2,6 +2,7 @@ import numpy as np
 import gym
 import wandb
 import cv2
+import collections
 
 class BaseEnv(object):
 
@@ -108,16 +109,22 @@ class BaseEnv(object):
 
 
 class Base2DEnv(BaseEnv):
-    def __init__(self, env_name:str, width:int=84, height:int=84, grayscale:bool=True, **kwargs) -> None:
+    def __init__(self, env_name:str, width:int=84, height:int=84, grayscale:bool=True, seqlen:int=10, **kwargs) -> None:
         super().__init__(env_name, **kwargs)
         self.width = width
         self.height = height
         self.grayscale = grayscale
+        self.seqlen = seqlen
+        self.stack = collections.deque(maxlen=seqlen)
+        for _ in range(seqlen):
+            channels = 1 if self.grayscale else 3
+            empty_state = np.zeros((channels, self.width, self.height))
+            self.stack.append(empty_state)
 
     @property
     def state_dim_or_shape(self) -> tuple:
         channels = 1 if self.grayscale else 3
-        return (channels, self.width, self.height)
+        return (channels * self.seqlen, self.width, self.height)
     
     def state_fn(self, obs, raw_reward=None, done=None, terminal=None) -> np.ndarray:
         """
@@ -145,7 +152,9 @@ class Base2DEnv(BaseEnv):
             obs = cv2.resize(obs, (self.width, self.height), interpolation=cv2.INTER_AREA)
             # 调整图像通道顺序，从 HWC 调整为 CHW，以符合模型输入要求
             obs = np.transpose(obs, (2, 0, 1))
-        return obs
+        self.stack.append(obs)
+        state = np.concatenate(self.stack, axis=0)
+        return state
     
 
 
