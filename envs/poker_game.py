@@ -1,6 +1,7 @@
 from random import shuffle
 import numpy as np
 
+
 class PokerGame(object):
     """
     Poker Game
@@ -10,9 +11,10 @@ class PokerGame(object):
     如果两个人出牌相同，则这两人失败，另一个人获得这轮的奖励牌，
     游戏共进行10轮，最终得分最高的人获胜。
     """
-    
+
     def __init__(self) -> None:
         self._reset_game()
+
     def _reset_game(self):
         self.cards_a = list(range(10))
         self.cards_b = list(range(10))
@@ -73,22 +75,28 @@ class PokerGame(object):
     @property
     def total_reward(self) -> tuple:
         return self.total_reward_a, self.total_reward_b, self.total_reward_c
-    
+
     @property
     def winner(self):
         if not self.terminal:
             return False, False, False
-        max_total_reward = max(self.total_reward_a, self.total_reward_b, self.total_reward_c)
-        return max_total_reward == self.total_reward_a, max_total_reward == self.total_reward_b, max_total_reward == self.total_reward_c
+        max_total_reward = max(
+            self.total_reward_a, self.total_reward_b, self.total_reward_c
+        )
+        return (
+            max_total_reward == self.total_reward_a,
+            max_total_reward == self.total_reward_b,
+            max_total_reward == self.total_reward_c,
+        )
 
-    def bet(self, card_a:int=None, card_b:int=None, card_c:int=None):
+    def bet(self, card_a: int = None, card_b: int = None, card_c: int = None):
         """如果没有提供卡牌，或者提供无效卡牌，则从剩余牌中随机抽一张牌"""
         if card_a is None or card_a not in self.cards_a:
             shuffle(self.cards_a)
             card_a = self.cards_a.pop()
         else:
             self.cards_a.remove(card_a)
-        
+
         if card_b is None or card_b not in self.cards_b:
             shuffle(self.cards_b)
             card_b = self.cards_b.pop()
@@ -106,7 +114,7 @@ class PokerGame(object):
 
 
 class PokerGameEnv(object):
-    
+
     def __init__(self, **kwargs) -> None:
         self.kwargs = kwargs
         self.poker_game = PokerGame()
@@ -115,13 +123,13 @@ class PokerGameEnv(object):
     def _state(self) -> np.ndarray:
         current_reward_vector = [0] * 10
         if self.poker_game.current_reward is not None:
-            current_reward_index = self.poker_game.current_reward - 1 
+            current_reward_index = self.poker_game.current_reward - 1
             current_reward_vector[current_reward_index] = 1
 
         remaining_reward_vector = [0] * 10
         for i in self.poker_game.cards_r:
             remaining_reward_vector[i] = 1
-        
+
         remaining_cards_a = [0] * 10
         for i in self.poker_game.cards_a:
             remaining_cards_a[i] = 1
@@ -129,27 +137,41 @@ class PokerGameEnv(object):
         remaining_cards_b = [0] * 10
         for i in self.poker_game.cards_b:
             remaining_cards_b[i] = 1
-        
+
         remaining_cards_c = [0] * 10
         for i in self.poker_game.cards_c:
             remaining_cards_c[i] = 1
 
-        if self.kwargs.get('state_ndim', 1) == 2:
-            return np.array([current_reward_vector, remaining_reward_vector, remaining_cards_a, remaining_cards_b, remaining_cards_c])
+        if self.kwargs.get("state_ndim", 1) == 2:
+            return np.array(
+                [
+                    current_reward_vector,
+                    remaining_reward_vector,
+                    remaining_cards_a,
+                    remaining_cards_b,
+                    remaining_cards_c,
+                ]
+            )
         else:
-            return np.array(current_reward_vector + remaining_reward_vector + remaining_cards_a + remaining_cards_b + remaining_cards_c)
+            return np.array(
+                current_reward_vector
+                + remaining_reward_vector
+                + remaining_cards_a
+                + remaining_cards_b
+                + remaining_cards_c
+            )
 
     @property
     def state_dim(self) -> int:
-        if self.kwargs.get('state_ndim', 1) == 2:
+        if self.kwargs.get("state_ndim", 1) == 2:
             return (5, 10)
         else:
             return 50
-        
+
     @property
     def action_dim(self) -> int:
         return 10
-    
+
     @property
     def action_mask(self) -> list:
         mask = [0] * 10
@@ -163,10 +185,9 @@ class PokerGameEnv(object):
         obs = self._state
         info = {
             "total_reward": self.poker_game.total_reward,
-            "winner": self.poker_game.winner
+            "winner": self.poker_game.winner,
         }
         return obs, info
-        
 
     def sample_action(self) -> int:
         shuffle(self.poker_game.cards_a)
@@ -180,19 +201,22 @@ class PokerGameEnv(object):
         reward = self.poker_game.current_result_a
         obs = self._state
         done = self.poker_game.winner[0]
-        
+
         info = {
             "total_reward": self.poker_game.total_reward,
-            "winner": self.poker_game.winner
+            "winner": self.poker_game.winner,
         }
 
         return obs, reward, done, terminal, info
 
+
 def poker_game_raw() -> PokerGameEnv:
     return PokerGameEnv(state_ndim=1)
 
+
 def poker_game_raw_2d() -> PokerGameEnv:
     return PokerGameEnv(state_ndim=2)
+
 
 def test_poker_game():
     game = PokerGame()
@@ -233,12 +257,11 @@ def test_poker_game_env():
         print(f"{reward=}")
         print(info)
         print(obs)
-        
+
         if done or terminal:
             break
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # test_poker_game()
     test_poker_game_env()
-
-

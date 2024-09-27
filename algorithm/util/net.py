@@ -3,8 +3,19 @@ import numpy as np
 
 
 class MLPNetwork(torch.nn.Module):
-    
-    def __init__(self, input_dim:int, output_dim:int, hidden_dims:tuple, activation=torch.nn.ReLU(), batch_norm:bool=True, dropout:float=None, input_norm:bool=False, *args, **kwargs) -> None:
+
+    def __init__(
+        self,
+        input_dim: int,
+        output_dim: int,
+        hidden_dims: tuple,
+        activation=torch.nn.ReLU(),
+        batch_norm: bool = True,
+        dropout: float = None,
+        input_norm: bool = False,
+        *args,
+        **kwargs
+    ) -> None:
         super().__init__()
 
         if dropout and not (0.0 < dropout < 1.0):
@@ -26,7 +37,7 @@ class MLPNetwork(torch.nn.Module):
                     self.mlp.append(torch.nn.Dropout(p=dropout))
                 in_dim = out_dim
         self.mlp.append(torch.nn.Linear(in_dim, output_dim))
-    
+
     def forward(self, x):
         for layer in self.mlp:
             x = layer(x)
@@ -35,7 +46,17 @@ class MLPNetwork(torch.nn.Module):
 
 class CNNNetwork(torch.nn.Module):
 
-    def __init__(self, input_shape:tuple, output_dim:int, conv_layers:tuple, activation=torch.nn.ReLU(), batch_norm:bool=True, dropout:float=None, *args, **kwargs) -> None:
+    def __init__(
+        self,
+        input_shape: tuple,
+        output_dim: int,
+        conv_layers: tuple,
+        activation=torch.nn.ReLU(),
+        batch_norm: bool = True,
+        dropout: float = None,
+        *args,
+        **kwargs
+    ) -> None:
         super().__init__()
 
         if dropout and not (0.0 < dropout < 1.0):
@@ -58,14 +79,16 @@ class CNNNetwork(torch.nn.Module):
 
         fc_input_dim = self._calc_conv_flatten_dim()
         self.fc = torch.nn.Linear(fc_input_dim, output_dim)
-        
+
     def forward(self, x):
         for layer in self.convs:
             x = layer(x)
         x = self.fc(x)
         return x
-    
-    def _calc_conv_flatten_dim(self,) -> int:
+
+    def _calc_conv_flatten_dim(
+        self,
+    ) -> int:
         x = torch.zeros(1, *self.input_shape)
         for layer in self.convs:
             x = layer(x)

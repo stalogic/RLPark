@@ -7,16 +7,39 @@ from .util import OffPolicyRLModel, QValueNetwork, ValueAdvanceNetwork
 
 
 class DQN(OffPolicyRLModel):
-    
-    def __init__(self, state_dim_or_shape, action_dim_or_shape, hidden_dims=(32,), conv_layers=((32, 3),), batch_size=128, epsilon=0.05, lr=1e-3, gamma=0.99, dueling_dqn:bool=False, double_dqn:bool=False, device='cpu', capacity=10000, **kwargs) -> None:
+
+    def __init__(
+        self,
+        state_dim_or_shape,
+        action_dim_or_shape,
+        hidden_dims=(32,),
+        conv_layers=((32, 3),),
+        batch_size=128,
+        epsilon=0.05,
+        lr=1e-3,
+        gamma=0.99,
+        dueling_dqn: bool = False,
+        double_dqn: bool = False,
+        device="cpu",
+        capacity=10000,
+        **kwargs,
+    ) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, capacity)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
-            raise TypeError('state_dim_or_shape must be int, tuple or list')
+            raise TypeError("state_dim_or_shape must be int, tuple or list")
         if not isinstance(action_dim_or_shape, (int, tuple, list)):
-            raise TypeError('action_dim_or_shape must be int, tuple or list')
-        
-        self.state_shape = (state_dim_or_shape,) if isinstance(state_dim_or_shape, int) else tuple(state_dim_or_shape)
-        self.action_dim = action_dim_or_shape[0] if not isinstance(action_dim_or_shape, int) else action_dim_or_shape
+            raise TypeError("action_dim_or_shape must be int, tuple or list")
+
+        self.state_shape = (
+            (state_dim_or_shape,)
+            if isinstance(state_dim_or_shape, int)
+            else tuple(state_dim_or_shape)
+        )
+        self.action_dim = (
+            action_dim_or_shape[0]
+            if not isinstance(action_dim_or_shape, int)
+            else action_dim_or_shape
+        )
         self.batch_size = batch_size
         self.init_epsilon = 1.5
         self.min_epsilon = epsilon
@@ -28,9 +51,21 @@ class DQN(OffPolicyRLModel):
         self.kwargs = kwargs
 
         if self.dueling_dqn:
-            self.q_net = ValueAdvanceNetwork(self.state_shape, self.action_dim, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
+            self.q_net = ValueAdvanceNetwork(
+                self.state_shape,
+                self.action_dim,
+                hidden_dims=hidden_dims,
+                conv_layers=conv_layers,
+                **kwargs,
+            )
         else:
-            self.q_net = QValueNetwork(self.state_shape, self.action_dim, hidden_dims=hidden_dims, conv_layers=conv_layers, **kwargs)
+            self.q_net = QValueNetwork(
+                self.state_shape,
+                self.action_dim,
+                hidden_dims=hidden_dims,
+                conv_layers=conv_layers,
+                **kwargs,
+            )
         self.target_q_net = copy.deepcopy(self.q_net)
 
         self.q_net.to(device)
@@ -38,14 +73,24 @@ class DQN(OffPolicyRLModel):
         self.target_q_net.eval()
 
         self.q_net_optimizer = torch.optim.Adam(self.q_net.parameters(), lr=lr)
-        self.q_net_scheduler = torch.optim.lr_scheduler.StepLR(self.q_net_optimizer, step_size=self.kwargs.get("scheduler_step_size", 100), gamma=0.955)
+        self.q_net_scheduler = torch.optim.lr_scheduler.StepLR(
+            self.q_net_optimizer,
+            step_size=self.kwargs.get("scheduler_step_size", 100),
+            gamma=0.955,
+        )
 
     @property
     def epsilon(self) -> float:
         self.init_epsilon *= 1 - 1e-6
-        ep = self.init_epsilon if self.init_epsilon > self.min_epsilon else self.min_epsilon
-        try: wandb.log({'TR_Epsilon': ep})
-        except: pass
+        ep = (
+            self.init_epsilon
+            if self.init_epsilon > self.min_epsilon
+            else self.min_epsilon
+        )
+        try:
+            wandb.log({"TR_Epsilon": ep})
+        except:
+            pass
         return ep
 
     def take_action(self, state) -> int:
@@ -56,16 +101,18 @@ class DQN(OffPolicyRLModel):
                 state = torch.tensor(state, dtype=torch.float).to(self.device)
                 action = self.q_net(state).argmax().item()
         return action
-    
-    def take_action_with_mask(self, state, mask: list|np.ndarray) -> int:
+
+    def take_action_with_mask(self, state, mask: list | np.ndarray) -> int:
         if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim:
-            raise ValueError("mask must be a list or numpy array with length of action_dim")
+            raise ValueError(
+                "mask must be a list or numpy array with length of action_dim"
+            )
         if isinstance(mask, list):
             mask = np.array(mask)
         mask = mask.astype(int)
 
         if np.random.random() < self.epsilon:
-            action = np.random.choice(self.action_dim, p=mask/mask.sum())
+            action = np.random.choice(self.action_dim, p=mask / mask.sum())
         else:
             with torch.no_grad(), self.eval_mode():
                 state = torch.tensor(state, dtype=torch.float).to(self.device)
@@ -74,20 +121,22 @@ class DQN(OffPolicyRLModel):
                 action = q_value.argmax()
 
         return action
-    
+
     def predict_action(self, state) -> int:
         with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float).to(self.device)
             action = self.q_net(state).argmax().item()
         return action
-    
-    def predict_action_with_mask(self, state, mask: list|np.ndarray) -> int:
+
+    def predict_action_with_mask(self, state, mask: list | np.ndarray) -> int:
         if not isinstance(mask, (list, np.ndarray)) or len(mask) != self.action_dim:
-            raise ValueError("mask must be a list or numpy array with length of action_dim")
+            raise ValueError(
+                "mask must be a list or numpy array with length of action_dim"
+            )
         if isinstance(mask, list):
             mask = np.array(mask)
         mask = mask.astype(int)
-        
+
         with torch.no_grad(), self.eval_mode():
             state = torch.tensor(state, dtype=torch.float).to(self.device)
             q_value = self.q_net(state).numpy()
@@ -96,10 +145,12 @@ class DQN(OffPolicyRLModel):
         return action
 
     def update(self) -> None:
-        if len(self.replay_buffer) < self.kwargs.get('batch_size', 1000):
+        if len(self.replay_buffer) < self.kwargs.get("batch_size", 1000):
             return
-        
-        states, actions, rewards, next_states, dones = self.replay_buffer.sample(self.batch_size)
+
+        states, actions, rewards, next_states, dones = self.replay_buffer.sample(
+            self.batch_size
+        )
         states = torch.tensor(states, dtype=torch.float).to(self.device)
         actions = torch.tensor(actions, dtype=torch.long).view(-1, 1).to(self.device)
         rewards = torch.tensor(rewards, dtype=torch.float).view(-1, 1).to(self.device)
@@ -118,29 +169,42 @@ class DQN(OffPolicyRLModel):
         loss = torch.nn.functional.mse_loss(q_values, q_target)
         self.q_net_optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_net.parameters(), self.kwargs.get('max_grad_norm', 0.5))
+        torch.nn.utils.clip_grad_norm_(
+            self.q_net.parameters(), self.kwargs.get("max_grad_norm", 0.5)
+        )
         self.q_net_optimizer.step()
 
-        try: wandb.log({'Tr_loss': loss.item(), 'Tr_learning_rate': self.q_net_scheduler.get_last_lr()[0]})
-        except: pass
+        try:
+            wandb.log(
+                {
+                    "Tr_loss": loss.item(),
+                    "Tr_learning_rate": self.q_net_scheduler.get_last_lr()[0],
+                }
+            )
+        except:
+            pass
 
         self.count += 1
-        if tau:=self.kwargs.get('tau'):
+        if tau := self.kwargs.get("tau"):
             for param_name in self.q_net.state_dict().keys():
                 target_param = self.target_q_net.state_dict()[param_name]
                 param = self.q_net.state_dict()[param_name]
-                target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
-        elif self.count % self.kwargs.get('target_update_frequency', 100) == 0:
-            self.target_q_net.load_state_dict(self.q_net.state_dict())           
+                target_param.data.copy_(
+                    target_param.data * (1.0 - tau) + param.data * tau
+                )
+        elif self.count % self.kwargs.get("target_update_frequency", 100) == 0:
+            self.target_q_net.load_state_dict(self.q_net.state_dict())
 
-        if self.kwargs.get('save_path') and self.count % self.kwargs.get('save_frequency', 1000) == 0:
+        if (
+            self.kwargs.get("save_path")
+            and self.count % self.kwargs.get("save_frequency", 1000) == 0
+        ):
             self.save()
 
     def save(self) -> None:
-        path = Path(self.kwargs.get('save_path')) / f"{self.count}"
+        path = Path(self.kwargs.get("save_path")) / f"{self.count}"
         path.mkdir(parents=True, exist_ok=True)
-        torch.save(self.q_net.state_dict(), path / 'q_net.pth')
+        torch.save(self.q_net.state_dict(), path / "q_net.pth")
 
-    def load(self, version:str):
+    def load(self, version: str):
         pass
-

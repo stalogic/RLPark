@@ -6,12 +6,14 @@ from . import ReplayBuffer
 
 
 class OnPolicyRLModel(object):
-    def __init__(self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000, **kwargs) -> None:
+    def __init__(
+        self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000, **kwargs
+    ) -> None:
         self.count = 0
 
     @contextmanager
     def eval_mode(self):
-        changed_model :dict[str, torch.nn.Module] = dict()
+        changed_model: dict[str, torch.nn.Module] = dict()
         for key, field in self.__dict__.items():
             if isinstance(field, torch.nn.Module) and field.training:
                 field.eval()
@@ -19,7 +21,7 @@ class OnPolicyRLModel(object):
         yield
         for key, field in changed_model.items():
             field.train()
-    
+
     def update_learning_rate(self) -> None:
         for name, field in self.__dict__.items():
             if isinstance(field, torch.optim.lr_scheduler.LRScheduler):
@@ -29,15 +31,27 @@ class OnPolicyRLModel(object):
         for param_name in net.state_dict().keys():
             target_param = target_net.state_dict()[param_name]
             net_param = net.state_dict()[param_name]
-            target_param.data.copy_(target_param.data * (1 - tau) + net_param.data * tau)
+            target_param.data.copy_(
+                target_param.data * (1 - tau) + net_param.data * tau
+            )
+
 
 class OffPolicyRLModel(OnPolicyRLModel):
 
-    def __init__(self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000, **kwargs) -> None:
+    def __init__(
+        self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000, **kwargs
+    ) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, capacity, **kwargs)
         self.replay_buffer = ReplayBuffer(capacity)
 
-    def add_experience(self, state:list|np.ndarray, action:int|float|list|np.ndarray, reward:int|float|list|np.ndarray, next_state:list|np.ndarray, done:bool|int|float) -> None:
+    def add_experience(
+        self,
+        state: list | np.ndarray,
+        action: int | float | list | np.ndarray,
+        reward: int | float | list | np.ndarray,
+        next_state: list | np.ndarray,
+        done: bool | int | float,
+    ) -> None:
         if isinstance(state, list):
             state = np.array(state)
         # state = state.reshape(-1, *self.state_shape)
@@ -57,6 +71,3 @@ class OffPolicyRLModel(OnPolicyRLModel):
         done = done.reshape(-1, 1)
 
         self.replay_buffer.store(state, action, reward, next_state, done)
-
-
-        

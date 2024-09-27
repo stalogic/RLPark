@@ -3,16 +3,25 @@ import numpy as np
 
 from .net import MLPNetwork, CNNNetwork
 
+
 class ValueNetwork(torch.nn.Module):
 
-    def __init__(self, state_shape:tuple, hidden_dims:tuple=(128,), conv_layers:tuple=((32, 3),), **kwargs):
+    def __init__(
+        self,
+        state_shape: tuple,
+        hidden_dims: tuple = (128,),
+        conv_layers: tuple = ((32, 3),),
+        **kwargs
+    ):
         super(ValueNetwork, self).__init__()
         self.state_shape = state_shape
-        
+
         if len(self.state_shape) < 3:
             self.mlp = MLPNetwork(np.prod(state_shape), 1, hidden_dims, **kwargs)
         elif len(self.state_shape) == 3:
-            self.cnn = CNNNetwork(self.state_shape, hidden_dims[0], conv_layers, **kwargs)
+            self.cnn = CNNNetwork(
+                self.state_shape, hidden_dims[0], conv_layers, **kwargs
+            )
             self.mlp = MLPNetwork(hidden_dims[0], 1, hidden_dims, **kwargs)
         else:
             raise ValueError("state_shape must be 1D or 3D")
@@ -28,17 +37,26 @@ class ValueNetwork(torch.nn.Module):
             s = torch.reshape(s, (-1, np.prod(self.state_shape)))
             x = self.mlp(s)
         return x
-    
+
 
 class QValueNetwork(torch.nn.Module):
 
-    def __init__(self, state_shape:tuple, action_dim:int, hidden_dims:tuple=(128,), conv_layers:tuple=((32, 3),), **kwargs):
+    def __init__(
+        self,
+        state_shape: tuple,
+        action_dim: int,
+        hidden_dims: tuple = (128,),
+        conv_layers: tuple = ((32, 3),),
+        **kwargs
+    ):
         super(QValueNetwork, self).__init__()
         self.state_shape = state_shape
         self.action_dim = action_dim
 
         if len(self.state_shape) < 3:
-            self.mlp = MLPNetwork(np.prod(state_shape), action_dim, hidden_dims, **kwargs)
+            self.mlp = MLPNetwork(
+                np.prod(state_shape), action_dim, hidden_dims, **kwargs
+            )
         elif len(self.state_shape) == 3:
             self.cnn = CNNNetwork(state_shape, hidden_dims[0], conv_layers, **kwargs)
             self.mlp = MLPNetwork(hidden_dims[0], action_dim, hidden_dims, **kwargs)
@@ -56,23 +74,34 @@ class QValueNetwork(torch.nn.Module):
             s = torch.reshape(s, (-1, np.prod(self.state_shape)))
             x = self.mlp(s)
         return x
-    
+
 
 class ValueAdvanceNetwork(torch.nn.Module):
 
-    def __init__(self, state_shape:tuple, action_dim:int, hidden_dims:tuple=(128,), conv_layers:tuple=((32, 3),), **kwargs):
+    def __init__(
+        self,
+        state_shape: tuple,
+        action_dim: int,
+        hidden_dims: tuple = (128,),
+        conv_layers: tuple = ((32, 3),),
+        **kwargs
+    ):
         super(ValueAdvanceNetwork, self).__init__()
         self.state_shape = state_shape
         self.action_dim = action_dim
 
         if len(self.state_shape) < 3:
-            self.mlp = MLPNetwork(np.prod(state_shape), hidden_dims[-1], hidden_dims[:-1], **kwargs)
+            self.mlp = MLPNetwork(
+                np.prod(state_shape), hidden_dims[-1], hidden_dims[:-1], **kwargs
+            )
         elif len(self.state_shape) == 3:
             self.cnn = CNNNetwork(state_shape, hidden_dims[0], conv_layers, **kwargs)
-            self.mlp = MLPNetwork(hidden_dims[0], hidden_dims[-1], hidden_dims[:-1], **kwargs)
+            self.mlp = MLPNetwork(
+                hidden_dims[0], hidden_dims[-1], hidden_dims[:-1], **kwargs
+            )
         else:
             raise ValueError("state_shape must be 1D or 3D")
-        
+
         self.fc_value = torch.nn.Linear(hidden_dims[-1], 1)
         self.fc_advance = torch.nn.Linear(hidden_dims[-1], action_dim)
 
@@ -86,16 +115,23 @@ class ValueAdvanceNetwork(torch.nn.Module):
         else:
             s = torch.reshape(s, (-1, np.prod(self.state_shape)))
             x = self.mlp(s)
-        
+
         v = self.fc_value(x)
         a = self.fc_advance(x)
         q = v + a - a.mean(dim=1, keepdim=True)
         return q
-    
+
 
 class ContinuousQValueNetwork(torch.nn.Module):
-    
-    def __init__(self, state_shape:tuple, action_shape:tuple, hidden_dims:tuple=(128,), conv_layers:tuple=((32, 3),), **kwargs):
+
+    def __init__(
+        self,
+        state_shape: tuple,
+        action_shape: tuple,
+        hidden_dims: tuple = (128,),
+        conv_layers: tuple = ((32, 3),),
+        **kwargs
+    ):
         super(ContinuousQValueNetwork, self).__init__()
         self.state_shape = state_shape
         self.action_shape = action_shape
@@ -107,12 +143,13 @@ class ContinuousQValueNetwork(torch.nn.Module):
             sqrt_dim = int(np.sqrt(hidden_dims[0] * np.prod(action_shape)))
             cnn_output_dim = max(10, min(128, sqrt_dim))
             self.cnn = CNNNetwork(state_shape, cnn_output_dim, conv_layers, **kwargs)
-            self.mlp = MLPNetwork(cnn_output_dim+np.prod(action_shape), 1, hidden_dims, **kwargs)
+            self.mlp = MLPNetwork(
+                cnn_output_dim + np.prod(action_shape), 1, hidden_dims, **kwargs
+            )
         else:
             raise ValueError("state_shape must be 1D or 3D")
 
         print(self)
-
 
     def forward(self, s, a) -> torch.Tensor:
         if hasattr(self, "cnn"):
@@ -127,11 +164,18 @@ class ContinuousQValueNetwork(torch.nn.Module):
             x = torch.cat((s, a), dim=1)
             x = self.mlp(x)
         return x
-    
+
 
 class PolicyNetwork(torch.nn.Module):
 
-    def __init__(self, state_shape:tuple, action_dim:int, hidden_dims:tuple=(128,), conv_layers:tuple=((32, 3),), **kwargs):
+    def __init__(
+        self,
+        state_shape: tuple,
+        action_dim: int,
+        hidden_dims: tuple = (128,),
+        conv_layers: tuple = ((32, 3),),
+        **kwargs
+    ):
         super(PolicyNetwork, self).__init__()
         self.state_shape = state_shape
         self.action_dim = action_dim
@@ -158,23 +202,34 @@ class PolicyNetwork(torch.nn.Module):
             x = self.mlp(x)
         x = self.softmax(x)
         return x
-    
+
 
 class ContinuousPolicyNetwork(torch.nn.Module):
 
-    def __init__(self, state_shape:tuple, action_shape:tuple, hidden_dims:tuple=(128,), conv_layers:tuple=((32, 3),), **kwargs):
+    def __init__(
+        self,
+        state_shape: tuple,
+        action_shape: tuple,
+        hidden_dims: tuple = (128,),
+        conv_layers: tuple = ((32, 3),),
+        **kwargs
+    ):
         super(ContinuousPolicyNetwork, self).__init__()
         self.state_shape = state_shape
         self.action_shape = action_shape
 
         if len(self.state_shape) < 3:
-            self.mlp = MLPNetwork(np.prod(state_shape), hidden_dims[-1], hidden_dims, **kwargs)
+            self.mlp = MLPNetwork(
+                np.prod(state_shape), hidden_dims[-1], hidden_dims, **kwargs
+            )
         elif len(self.state_shape) == 3:
             self.cnn = CNNNetwork(state_shape, hidden_dims[0], conv_layers, **kwargs)
-            self.mlp = MLPNetwork(hidden_dims[0], hidden_dims[-1], hidden_dims, **kwargs)
+            self.mlp = MLPNetwork(
+                hidden_dims[0], hidden_dims[-1], hidden_dims, **kwargs
+            )
         else:
             raise ValueError("state_shape must be 1D or 3D")
-        
+
         self.mu = torch.nn.Linear(hidden_dims[-1], np.prod(self.action_shape))
         self.std = torch.nn.Linear(hidden_dims[-1], np.prod(self.action_shape))
         self.softplus = torch.nn.Softplus()
@@ -192,21 +247,33 @@ class ContinuousPolicyNetwork(torch.nn.Module):
         mu = torch.reshape(mu, (-1,) + self.action_shape)
         std = torch.reshape(std, (-1,) + self.action_shape)
         return mu, std
-    
+
 
 class DeterministicPolicyNetwork(torch.nn.Module):
-    
-    def __init__(self, state_shape:tuple, action_shape:tuple, action_bound:float|np.ndarray, hidden_dims:tuple=(128,), conv_layers:tuple=((32, 3),), **kwargs):
+
+    def __init__(
+        self,
+        state_shape: tuple,
+        action_shape: tuple,
+        action_bound: float | np.ndarray,
+        hidden_dims: tuple = (128,),
+        conv_layers: tuple = ((32, 3),),
+        **kwargs
+    ):
         super(DeterministicPolicyNetwork, self).__init__()
         self.state_shape = state_shape
         self.action_shape = action_shape
         self.action_bound = torch.tensor(action_bound)
 
         if len(self.state_shape) < 3:
-            self.mlp = MLPNetwork(np.prod(state_shape), np.prod(action_shape), hidden_dims, **kwargs)
+            self.mlp = MLPNetwork(
+                np.prod(state_shape), np.prod(action_shape), hidden_dims, **kwargs
+            )
         elif len(self.state_shape) == 3:
             self.cnn = CNNNetwork(state_shape, hidden_dims[0], conv_layers, **kwargs)
-            self.mlp = MLPNetwork(hidden_dims[0], np.prod(action_shape), hidden_dims, **kwargs)
+            self.mlp = MLPNetwork(
+                hidden_dims[0], np.prod(action_shape), hidden_dims, **kwargs
+            )
         else:
             raise ValueError("state_shape must be 1D or 3D")
         self.tanh = torch.nn.Tanh()
@@ -228,17 +295,28 @@ class DeterministicPolicyNetwork(torch.nn.Module):
 
 class DiscreteDeterministicPolicyNetwork(torch.nn.Module):
     """用于离散动作DDPG算法的策略网络，输出gumbel-softmax分布的logits"""
-    
-    def __init__(self, state_shape:tuple, action_shape:tuple, hidden_dims:tuple=(128,), conv_layers:tuple=((32, 3),), **kwargs):
+
+    def __init__(
+        self,
+        state_shape: tuple,
+        action_shape: tuple,
+        hidden_dims: tuple = (128,),
+        conv_layers: tuple = ((32, 3),),
+        **kwargs
+    ):
         super(DiscreteDeterministicPolicyNetwork, self).__init__()
         self.state_shape = state_shape
         self.action_shape = action_shape
 
         if len(self.state_shape) < 3:
-            self.mlp = MLPNetwork(np.prod(state_shape), np.prod(action_shape), hidden_dims, **kwargs)
+            self.mlp = MLPNetwork(
+                np.prod(state_shape), np.prod(action_shape), hidden_dims, **kwargs
+            )
         elif len(self.state_shape) == 3:
             self.cnn = CNNNetwork(state_shape, hidden_dims[0], conv_layers, **kwargs)
-            self.mlp = MLPNetwork(hidden_dims[0], np.prod(action_shape), hidden_dims, **kwargs)
+            self.mlp = MLPNetwork(
+                hidden_dims[0], np.prod(action_shape), hidden_dims, **kwargs
+            )
         else:
             raise ValueError("state_shape must be 1D or 3D")
 
@@ -254,5 +332,3 @@ class DiscreteDeterministicPolicyNetwork(torch.nn.Module):
             x = self.mlp(x)
         x = torch.reshape(x, (-1, *self.action_shape))
         return x
-
-
