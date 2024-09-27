@@ -1,5 +1,5 @@
 import numpy as np
-import gym
+import gymnasium as gym
 import wandb
 import cv2
 import collections
@@ -35,7 +35,7 @@ class BaseEnv(object):
     @property
     def action_dim_or_shape(self) -> int | tuple[int]:
         if isinstance(self.env.action_space, gym.spaces.discrete.Discrete):
-            return self.env.action_space.n
+            return int(self.env.action_space.n)
         elif isinstance(self.env.action_space, gym.spaces.box.Box):
             return self.env.action_space.shape
         raise NotImplementedError("action_space type not supported")
