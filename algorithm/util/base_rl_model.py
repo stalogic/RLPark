@@ -2,12 +2,12 @@ import torch
 import numpy as np
 from contextlib import contextmanager
 
-from . import ReplayBuffer
+from . import ReplayBuffer, PrioritizedReplayBuffer
 
 
 class OnPolicyRLModel(object):
     def __init__(
-        self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000, **kwargs
+        self, state_dim_or_shape, action_dim_or_shape=1, **kwargs
     ) -> None:
         self.count = 0
 
@@ -39,10 +39,14 @@ class OnPolicyRLModel(object):
 class OffPolicyRLModel(OnPolicyRLModel):
 
     def __init__(
-        self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000, **kwargs
+        self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000, batch_size=128, prioritized=False, **kwargs
     ) -> None:
-        super().__init__(state_dim_or_shape, action_dim_or_shape, capacity, **kwargs)
-        self.replay_buffer = ReplayBuffer(capacity)
+        super().__init__(state_dim_or_shape, action_dim_or_shape, **kwargs)
+        if prioritized:
+            self.replay_buffer = PrioritizedReplayBuffer(capacity)
+        else:
+            self.replay_buffer = ReplayBuffer(capacity)
+        self.batch_size = batch_size
 
     def add_experience(
         self,

@@ -8,15 +8,13 @@ from .tree import SumTree
 class PrioritizedReplayBuffer:
     def __init__(
         self,
-        state_size,
-        action_size,
-        buffer_size,
+        capacity=100000,
         eps=1e-2,
         alpha=0.1,
         beta=0.1,
         device="cpu",
     ):
-        self.tree = SumTree(size=buffer_size)
+        self.tree = SumTree(size=capacity)
 
         # PER params
         self.eps = eps  # minimal priority, prevents zero probabilities
@@ -24,31 +22,30 @@ class PrioritizedReplayBuffer:
         self.beta = beta  # determines the amount of importance-sampling correction, b = 1 fully compensate for the non-uniform probabilities
         self.max_priority = eps  # priority for new samples, init as eps
 
-        # transition: state, action, reward, next_state, done
-        self.state = torch.empty(buffer_size, state_size, dtype=torch.float)
-        self.action = torch.empty(buffer_size, action_size, dtype=torch.float)
-        self.reward = torch.empty(buffer_size, dtype=torch.float)
-        self.next_state = torch.empty(buffer_size, state_size, dtype=torch.float)
-        self.done = torch.empty(buffer_size, dtype=torch.int)
+        self.buffer = [None] * capacity
 
         self.count = 0
         self.real_size = 0
-        self.size = buffer_size
+        self.size = capacity
 
         self.device = device
 
-    def add(self, transition):
-        state, action, reward, next_state, done = transition
+    def __len__(self):
+        return self.real_size
+
+    def store(self, state, action, reward, next_state, done):
 
         # store transition index with maximum priority in sum tree
         self.tree.add(self.max_priority, self.count)
 
         # store transition in the buffer
-        self.state[self.count] = torch.as_tensor(state)
-        self.action[self.count] = torch.as_tensor(action)
-        self.reward[self.count] = torch.as_tensor(reward)
-        self.next_state[self.count] = torch.as_tensor(next_state)
-        self.done[self.count] = torch.as_tensor(done)
+        self.buffer[self.count] = (
+            torch.as_tensor(state),
+            torch.as_tensor(action),
+            torch.as_tensor(reward),
+            torch.as_tensor(next_state),
+            torch.as_tensor(done),
+        )
 
         # update counters
         self.count = (self.count + 1) % self.size
@@ -97,14 +94,9 @@ class PrioritizedReplayBuffer:
         # so that max_i w_i = 1. We found that this worked better in practice as it kept all weights
         # within a reasonable range, avoiding the possibility of extremely large updates. (Appendix B.2.1, Proportional prioritization)
         weights = weights / weights.max()
-
-        batch = (
-            self.state[sample_idxs].to(self.device),
-            self.action[sample_idxs].to(self.device),
-            self.reward[sample_idxs].to(self.device),
-            self.next_state[sample_idxs].to(self.device),
-            self.done[sample_idxs].to(self.device),
-        )
+        
+        sample_transitions = (self.buffer[idx] for idx in sample_idxs)
+        batch = tuple(map(torch.as_tensor, zip(*sample_transitions)))
         return batch, weights, tree_idxs
 
     def update_priorities(self, data_idxs, priorities):
@@ -119,45 +111,3 @@ class PrioritizedReplayBuffer:
 
             self.tree.update(data_idx, priority)
             self.max_priority = max(self.max_priority, priority)
-
-
-class ReplayBuffer:
-    def __init__(self, state_size, action_size, buffer_size):
-        # state, action, reward, next_state, done
-        self.state = torch.empty(buffer_size, state_size, dtype=torch.float)
-        self.action = torch.empty(buffer_size, action_size, dtype=torch.float)
-        self.reward = torch.empty(buffer_size, dtype=torch.float)
-        self.next_state = torch.empty(buffer_size, state_size, dtype=torch.float)
-        self.done = torch.empty(buffer_size, dtype=torch.int)
-
-        self.count = 0
-        self.real_size = 0
-        self.size = buffer_size
-
-    def add(self, transition):
-        state, action, reward, next_state, done = transition
-
-        # store transition in the buffer
-        self.state[self.count] = torch.as_tensor(state)
-        self.action[self.count] = torch.as_tensor(action)
-        self.reward[self.count] = torch.as_tensor(reward)
-        self.next_state[self.count] = torch.as_tensor(next_state)
-        self.done[self.count] = torch.as_tensor(done)
-
-        # update counters
-        self.count = (self.count + 1) % self.size
-        self.real_size = min(self.size, self.real_size + 1)
-
-    def sample(self, batch_size):
-        assert self.real_size >= batch_size
-
-        sample_idxs = np.random.choice(self.real_size, batch_size, replace=False)
-
-        batch = (
-            self.state[sample_idxs].to(self.device),
-            self.action[sample_idxs].to(self.device),
-            self.reward[sample_idxs].to(self.device),
-            self.next_state[sample_idxs].to(self.device),
-            self.done[sample_idxs].to(self.device),
-        )
-        return batch
