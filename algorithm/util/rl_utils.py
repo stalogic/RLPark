@@ -6,7 +6,7 @@ import random
 import numpy as np
 import wandb
 
-from .base_rl_model import OnPolicyRLModel, OffPolicyRLModel
+from . import OnPolicyRLModel, OffPolicyRLModel, ReplayBuffer, PrioritizedReplayBuffer
 
 
 def set_seed(env, seed=0):
@@ -116,7 +116,17 @@ def train_and_evaluate_offpolicy_agent(
 
                 # 更新智能体模型
                 if train_freq is not None and episode_step % train_freq == 0:
-                    agent.update()
+                    if len(agent.replay_buffer) >= agent.batch_size:
+                        if isinstance(agent.replay_buffer, ReplayBuffer):
+                            transitions = agent.replay_buffer.sample(agent.batch_size)
+                            losses, td_error = agent.update(transitions)
+                        elif isinstance(agent.replay_buffer, PrioritizedReplayBuffer):
+                            transitions, weights, tree_idxs = agent.replay_buffer.sample(agent.batch_size)
+                            losses, td_error = agent.update(transitions, weights=weights)
+                            agent.replay_buffer.update_priorities(tree_idxs, td_error.numpy())
+                        else:
+                            raise RuntimeError("Unknown Replay Buffer")
+
 
                 update_time += time.time() - t0
 

@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 import collections
 import random
@@ -23,7 +24,16 @@ class ReplayBuffer(object):
         reward = np.array(reward).reshape((batch_size, -1))
         next_state = np.array(next_state)
         done = np.array(done).reshape((batch_size, -1))
-        return state, action, reward, next_state, done
+
+        batch_transition = (
+            torch.as_tensor(state),
+            torch.as_tensor(action),
+            torch.as_tensor(reward),
+            torch.as_tensor(next_state),
+            torch.as_tensor(done),
+        )
+
+        return batch_transition
 
     def size(self):
         return len(self.buffer)

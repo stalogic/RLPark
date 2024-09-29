@@ -22,6 +22,9 @@ class OnPolicyRLModel(object):
         for key, field in changed_model.items():
             field.train()
 
+    def update(self, transitions, weights=None) -> tuple:
+        raise NotImplementedError
+
     def update_learning_rate(self) -> None:
         for name, field in self.__dict__.items():
             if isinstance(field, torch.optim.lr_scheduler.LRScheduler):
