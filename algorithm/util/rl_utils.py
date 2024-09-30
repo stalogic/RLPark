@@ -121,12 +121,18 @@ def train_and_evaluate_offpolicy_agent(
                             transitions = agent.replay_buffer.sample(agent.batch_size)
                             losses, td_error = agent.update(transitions)
                         elif isinstance(agent.replay_buffer, PrioritizedReplayBuffer):
-                            transitions, weights, tree_idxs = agent.replay_buffer.sample(agent.batch_size)
-                            losses, td_error = agent.update(transitions, weights=weights)
-                            agent.replay_buffer.update_priorities(tree_idxs, td_error.numpy())
+                            transitions, weights, tree_idxs = (
+                                agent.replay_buffer.sample(agent.batch_size)
+                            )
+                            losses, td_error = agent.update(
+                                transitions, weights=weights
+                            )
+                            agent.replay_buffer.update_priorities(
+                                tree_idxs, td_error.cpu().numpy()
+                            )
+
                         else:
                             raise RuntimeError("Unknown Replay Buffer")
-
 
                 update_time += time.time() - t0
 

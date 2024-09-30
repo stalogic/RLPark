@@ -11,10 +11,11 @@ class CodeValue(object):
 
     def __str__(self) -> str:
         return self.value
-    
+
     def __repr__(self) -> str:
         return self.value
-    
+
+
 def generate_dict(**kwargs):
     lines = ["{"]
     for key, value in kwargs.items():
@@ -27,7 +28,8 @@ def generate_dict(**kwargs):
     lines.append("}")
     return " ".join(lines)
 
-def generate_fn(fn_name:str, *args, **kwargs):
+
+def generate_fn(fn_name: str, *args, **kwargs):
     lines = []
     lines.append(f"{fn_name}(")
     for arg in args:
@@ -46,10 +48,10 @@ def generate_fn(fn_name:str, *args, **kwargs):
             lines.append(f"{key}={value},")
     lines.append(f")")
     return " ".join(lines)
-    
+
 
 def generate_code(algo_name, env_name, **kwargs):
-    num_episodes = kwargs.get('num_episodes', 500)
+    num_episodes = kwargs.get("num_episodes", 500)
 
     import_code = f"""\
 import os
@@ -70,20 +72,34 @@ except:
     val_env = None
 """
 
-    wandb_init = generate_fn("wandb.init", project=f"{env_name}", config={
-        "state_dim": CodeValue("env.state_dim_or_shape"),
-        "action_dim": CodeValue("env.action_dim_or_shape"),
-        "algorithm": algo_name,
-        **kwargs
-    })
-    
-    agent_init = generate_fn(f"agent={algo_name}", CodeValue("env.state_dim_or_shape"), CodeValue("env.action_dim_or_shape"), 
-                            **kwargs
-                             )
+    wandb_init = generate_fn(
+        "wandb.init",
+        project=f"{env_name}",
+        config={
+            "state_dim": CodeValue("env.state_dim_or_shape"),
+            "action_dim": CodeValue("env.action_dim_or_shape"),
+            "algorithm": algo_name,
+            **kwargs,
+        },
+    )
 
-    train_code = generate_fn("train_and_evaluate", env=CodeValue("env"), agent=CodeValue("agent"), val_env=CodeValue("val_env"), **kwargs)
+    agent_init = generate_fn(
+        f"agent={algo_name}",
+        CodeValue("env.state_dim_or_shape"),
+        CodeValue("env.action_dim_or_shape"),
+        **kwargs,
+    )
+
+    train_code = generate_fn(
+        "train_and_evaluate",
+        env=CodeValue("env"),
+        agent=CodeValue("agent"),
+        val_env=CodeValue("val_env"),
+        **kwargs,
+    )
 
     return "\n\n".join([import_code, wandb_init, agent_init, train_code])
+
 
 def generate_python_script(algo_name: str, env_name: str, **kwargs):
     code = generate_code(algo_name, env_name, **kwargs)
@@ -99,5 +115,6 @@ def generate_python_script(algo_name: str, env_name: str, **kwargs):
         pass
     return str(path)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     typer.run(generate_python_script)

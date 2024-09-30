@@ -6,9 +6,7 @@ from . import ReplayBuffer, PrioritizedReplayBuffer
 
 
 class OnPolicyRLModel(object):
-    def __init__(
-        self, state_dim_or_shape, action_dim_or_shape=1, **kwargs
-    ) -> None:
+    def __init__(self, state_dim_or_shape, action_dim_or_shape=1, **kwargs) -> None:
         self.count = 0
 
     @contextmanager
@@ -42,7 +40,13 @@ class OnPolicyRLModel(object):
 class OffPolicyRLModel(OnPolicyRLModel):
 
     def __init__(
-        self, state_dim_or_shape, action_dim_or_shape=1, capacity=10000, batch_size=128, prioritized=False, **kwargs
+        self,
+        state_dim_or_shape,
+        action_dim_or_shape=1,
+        capacity=10000,
+        batch_size=128,
+        prioritized=False,
+        **kwargs
     ) -> None:
         super().__init__(state_dim_or_shape, action_dim_or_shape, **kwargs)
         if prioritized:

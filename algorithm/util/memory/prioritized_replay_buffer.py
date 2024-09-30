@@ -5,6 +5,12 @@ import numpy as np
 from .tree import SumTree
 
 
+def merge_tensor_list(tensor_list: list[torch.Tensor]) -> torch.Tensor:
+    assert isinstance(tensor_list, (list, tuple))
+    tensor_list = [torch.unsqueeze(torch.squeeze(tensor), 0) for tensor in tensor_list]
+    return torch.concat(tensor_list)
+
+
 class PrioritizedReplayBuffer:
     def __init__(
         self,
@@ -94,9 +100,9 @@ class PrioritizedReplayBuffer:
         # so that max_i w_i = 1. We found that this worked better in practice as it kept all weights
         # within a reasonable range, avoiding the possibility of extremely large updates. (Appendix B.2.1, Proportional prioritization)
         weights = weights / weights.max()
-        
+
         sample_transitions = (self.buffer[idx] for idx in sample_idxs)
-        batch = tuple(map(torch.as_tensor, zip(*sample_transitions)))
+        batch = [merge_tensor_list(tensors) for tensors in zip(*sample_transitions)]
         return batch, weights, tree_idxs
 
     def update_priorities(self, data_idxs, priorities):
@@ -108,6 +114,5 @@ class PrioritizedReplayBuffer:
             # where eps is a small positive constant that prevents the edge-case of transitions not being
             # revisited once their error is zero. (Section 3.3)
             priority = (priority + self.eps) ** self.alpha
-
             self.tree.update(data_idx, priority)
             self.max_priority = max(self.max_priority, priority)

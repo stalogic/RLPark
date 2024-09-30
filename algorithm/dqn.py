@@ -24,7 +24,7 @@ class DQN(OffPolicyRLModel):
         capacity=10000,
         **kwargs,
     ) -> None:
-        super().__init__(state_dim_or_shape, action_dim_or_shape, capacity)
+        super().__init__(state_dim_or_shape, action_dim_or_shape, capacity, **kwargs)
         if not isinstance(state_dim_or_shape, (int, tuple, list)):
             raise TypeError("state_dim_or_shape must be int, tuple or list")
         if not isinstance(action_dim_or_shape, (int, tuple, list)):
@@ -144,25 +144,15 @@ class DQN(OffPolicyRLModel):
             action = q_value.argmax()
         return action
 
-    def update(self, transitions:tuple, weights=None) -> tuple[torch.Tensor, torch.Tensor]:
-        # if len(self.replay_buffer) < self.kwargs.get("batch_size", 1000):
-        #     return
-
-        # states, actions, rewards, next_states, dones = self.replay_buffer.sample(
-        #     self.batch_size
-        # )
-        # states = torch.tensor(states, dtype=torch.float).to(self.device)
-        # actions = torch.tensor(actions, dtype=torch.long).view(-1, 1).to(self.device)
-        # rewards = torch.tensor(rewards, dtype=torch.float).view(-1, 1).to(self.device)
-        # next_states = torch.tensor(next_states, dtype=torch.float).to(self.device)
-        # dones = torch.tensor(dones, dtype=torch.float).view(-1, 1).to(self.device)
-
+    def update(
+        self, transitions: tuple, weights=None
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         states, actions, rewards, next_states, dones = transitions
         states = states.to(dtype=torch.float, device=self.device)
-        actions = actions.to(dtype=torch.int64, device=self.device)
-        rewards = rewards.to(dtype=torch.float, device=self.device)
+        actions = actions.view(-1, 1).to(dtype=torch.int64, device=self.device)
+        rewards = rewards.view(-1, 1).to(dtype=torch.float, device=self.device)
         next_states = next_states.to(dtype=torch.float, device=self.device)
-        dones = dones.to(dtype=torch.float, device=self.device)
+        dones = dones.view(-1, 1).to(dtype=torch.float, device=self.device)
 
         q_values = self.q_net(states).gather(1, actions)
         with torch.no_grad(), self.eval_mode():
@@ -175,10 +165,10 @@ class DQN(OffPolicyRLModel):
 
         if weights is None:
             weights = torch.ones_like(q_target)
+        weights = weights.to(self.device)
 
-        td_error = torch.abs(q_target - q_values).detach()
+        td_error = torch.abs(q_target - q_values).detach().squeeze()
         loss = torch.mean((q_target - q_values) ** 2 * weights)
-        # loss = torch.nn.functional.mse_loss(q_values, q_target)
         self.q_net_optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(
