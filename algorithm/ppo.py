@@ -179,7 +179,7 @@ class PPO(OnPolicyRLModel):
         for _ in range(self.epochs):
 
             log_probs = torch.log(self.policy_net(states).gather(1, actions))
-            ratio = torch.exp(log_probs - old_log_probs)
+            ratio = torch.exp(torch.clamp(log_probs - old_log_probs, -1., 1.))
             surr1 = ratio * advantage
             surr2 = torch.clamp(ratio, 1 - self.eps, 1 + self.eps) * advantage
             policy_loss = torch.mean(-torch.min(surr1, surr2))
