@@ -5,7 +5,7 @@ from .ac import (
     ActorCriticContinuous,
 )
 from .dqn import DQN
-from .ppo import PPO, PPOContinuous
+from .ppo2 import PPO, PPOContinuous
 from .ddpg import DDPG, DiscreteDDPG
 from .sac import SAC, SACContinuous
 

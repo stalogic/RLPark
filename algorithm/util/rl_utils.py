@@ -5,6 +5,7 @@ import torch
 import random
 import numpy as np
 import wandb
+from collections import defaultdict
 
 from . import OnPolicyRLModel, OffPolicyRLModel, ReplayBuffer, PrioritizedReplayBuffer
 
@@ -43,6 +44,16 @@ def compute_advantage(gamma, lamda, td_delta):
         advantage_list.append(advantage)
     advantage_list.reverse()
     return torch.tensor(np.array(advantage_list), dtype=torch.float)
+
+def compute_return(gamma, rewards):
+    rewards = rewards.detach().cpu().numpy()
+    return_list = []
+    cum_reward = 0.0
+    for reward in reversed(rewards):
+        cum_reward = reward + gamma * cum_reward
+        return_list.append(cum_reward)
+    return_list.reverse()
+    return torch.tensor(np.array(return_list), dtype=torch.float)
 
 
 def train_and_evaluate(env, agent, num_episodes=1000, val_env=None, **kwargs):
@@ -241,13 +252,7 @@ def train_and_evaluate_onpolicy_agent(
         for i_episode in pbar:
             # 重置环境，开始新episode
             state, _ = env.reset()
-            transition_dict = {
-                "states": [],
-                "actions": [],
-                "next_states": [],
-                "rewards": [],
-                "dones": [],
-            }
+            transition_dict = defaultdict(list)
             episode_return, episode_step, episode_done, episode_terminal = (
                 0.0,
                 0,
@@ -261,6 +266,10 @@ def train_and_evaluate_onpolicy_agent(
                     action = agent.take_action_with_mask(state, env.action_mask)
                 else:
                     action = agent.take_action(state)
+                if len(action) == 2:
+                    action, log_prob = action
+                else:
+                    log_prob = None
                 # 环境反馈，更新状态
                 next_state, reward, done, terminal, _ = env.step(action)
                 # 学习经验
@@ -269,6 +278,8 @@ def train_and_evaluate_onpolicy_agent(
                 transition_dict["next_states"].append(next_state)
                 transition_dict["rewards"].append(reward)
                 transition_dict["dones"].append(done)
+                if log_prob:
+                    transition_dict["log_probs"].append(log_prob)
                 state = next_state
 
                 episode_return += reward

@@ -144,10 +144,10 @@ def mountain_car_continuous_v3(**kwargs) -> BaseEnv:
                 velocity = 200 * abs(obs[1])
                 penatly = -0.01 * np.log1p(self.total_steps)
                 reward_ = reward + height + velocity + penatly
-                print(
-                    f"steps: {self.total_steps}, raw_reward: {reward:.3f}, height: {height:.3f}, velocity: {velocity:.3f}, penatly: {penatly:.3f}, reward: {reward_:.3f}"
-                )
-                input(">>>")
+                # print(
+                #     f"steps: {self.total_steps}, raw_reward: {reward:.3f}, height: {height:.3f}, velocity: {velocity:.3f}, penatly: {penatly:.3f}, reward: {reward_:.3f}"
+                # )
+                # input(">>>")
                 return reward_
 
     return MountainCarContinuousEnvV3("MountainCarContinuous-v0", **kwargs)

@@ -11,4 +11,4 @@ from .rl_net import (
 from .memory.replay_buffer import ReplayBuffer
 from .memory.prioritized_replay_buffer import PrioritizedReplayBuffer
 from .base_rl_model import OffPolicyRLModel, OnPolicyRLModel
-from .rl_utils import compute_advantage, train_and_evaluate
+from .rl_utils import compute_advantage, compute_return, train_and_evaluate
