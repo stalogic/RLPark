@@ -14,23 +14,17 @@ def pong_v1(full_action_space=False, **kwargs) -> Base2DEnv:
             width: int = 84,
             height: int = 84,
             grayscale: bool = True,
-            seqlen: int = 10,
+            seqlen: int = 50,
             **kwargs,
         ) -> None:
             super().__init__(env_name, width, height, grayscale, seqlen, **kwargs)
-            self.lapes = 0
 
         def reward_fn(self, obs=None, reward=None, done=None, terminal=None):
-            if -0.1 < reward < 0.1:
-                self.lapes += 1
-                extra_reward = 0
-            else:
-                if reward > 0:
-                    extra_reward = 0
-                else:
-                    extra_reward = math.log10(self.lapes) / 3
-                self.lapes = 0
-            return reward + extra_reward
+            if reward > 0:
+                reward *= 100
+            elif reward < 0:
+                reward *= 10
+            return reward + 1
 
     return PONG("ALE/Pong-v5", full_action_space=full_action_space, **kwargs)
 

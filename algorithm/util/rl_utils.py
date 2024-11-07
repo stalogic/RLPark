@@ -45,6 +45,7 @@ def compute_advantage(gamma, lamda, td_delta):
     advantage_list.reverse()
     return torch.tensor(np.array(advantage_list), dtype=torch.float)
 
+
 def compute_return(gamma, rewards):
     rewards = rewards.detach().cpu().numpy()
     return_list = []
@@ -266,7 +267,7 @@ def train_and_evaluate_onpolicy_agent(
                     action = agent.take_action_with_mask(state, env.action_mask)
                 else:
                     action = agent.take_action(state)
-                if len(action) == 2:
+                if isinstance(action, tuple) and len(action) == 2:
                     action, log_prob = action
                 else:
                     log_prob = None
