@@ -1,9 +1,11 @@
 import torch
+import torch.nn as nn
 import numpy as np
 from contextlib import contextmanager
 
-from . import ReplayBuffer, PrioritizedReplayBuffer
+from gymnasium.spaces import Box, Discrete
 
+from . import ReplayBuffer, PrioritizedReplayBuffer
 
 class OnPolicyRLModel(object):
     def __init__(self, state_dim_or_shape, action_dim_or_shape=1, **kwargs) -> None:
